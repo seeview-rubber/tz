@@ -138,6 +138,15 @@ th{background:#e8f5e9;text-align:center}
   border:1px solid #cfd8dc;margin-bottom:10px
 }
 .admin-sec h3{margin:0 0 8px;font-size:16px;color:#263238}
+.log-list{
+  max-height:220px;overflow-y:auto;border:1px solid #cfd8dc;
+  border-radius:6px;padding:6px;background:#fafafa;font-size:12px
+}
+.log-item{
+  padding:6px 4px;border-bottom:1px dashed #cfd8dc;line-height:1.4
+}
+.log-item:last-child{border-bottom:0}
+.log-time{color:#546e7a;font-size:11px;display:block}
 .hide{display:none!important}
 @page{size:A4 portrait;margin:0}
 @media print{
@@ -345,6 +354,12 @@ th{background:#e8f5e9;text-align:center}
           onclick="factoryResetPlot()">
           3. ล้างข้อมูลทั้งหมด (Factory Reset แปลงนี้)</button>
       </div>
+      <div class="admin-sec">
+        <h3>📜 ประวัติการแก้ไขระบบ (Activity Log)</h3>
+        <div id="actLogBox" class="log-list"></div>
+        <button type="button" class="bk" style="font-size:13px"
+          onclick="clearActLogs()">🗑️ ล้างประวัติการแก้ไข</button>
+      </div>
       <div class="admin-sec" style="margin-bottom:0">
         <h3>📦 สำรอง / กู้คืนข้อมูลทั้งระบบ</h3>
         <button type="button" class="bb" style="font-size:14px"
@@ -421,6 +436,7 @@ const FB_URL="https://seeview-rubber-default-rtdb"
   +"/rubberData.json";
 let APP_PIN=ls.getItem('rbCustomPin')||"1234";
 let ADMIN_PIN=ls.getItem('rbAdminPin')||"0955511956";
+let ACT_LOGS=JSON.parse(ls.getItem('rbActLogs')||'[]');
 const normPin=s=>String(s||"").trim()
   .replace(/[๐-๙]/g,c=>"๐๑๒๓๔๕๖๗๘๙".indexOf(c));
 const stripNum=n=>String(n||"")
@@ -431,6 +447,32 @@ const MF=["มกราคม","กุมภาพันธ์","มีนาค
   "เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม",
   "สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
 
+function addActLog(msg){
+  let d=new Date();
+  let tm=d.toLocaleDateString('th-TH',{
+    day:'2-digit',month:'short',year:'2-digit'
+  })+" "+d.toLocaleTimeString('th-TH',{
+    hour:'2-digit',minute:'2-digit'
+  });
+  ACT_LOGS.unshift({t:tm,m:msg});
+  if(ACT_LOGS.length>100)ACT_LOGS.length=100;
+  ls.setItem('rbActLogs',JSON.stringify(ACT_LOGS));
+}
+function renderActLogs(){
+  if(!$('actLogBox'))return;
+  actLogBox.innerHTML=ACT_LOGS.length?
+    ACT_LOGS.map(x=>`<div class="log-item">
+      <span class="log-time">🕒 ${x.t}</span>
+      <span>${x.m}</span></div>`).join(''):
+    `<p style="color:#78909c;text-align:center;margin:10px 0">
+      ยังไม่มีประวัติการแก้ไขระบบ</p>`;
+}
+function clearActLogs(){
+  if(!confirm("⚠️ ยืนยันการล้างประวัติการแก้ไขทั้งหมด?"))return;
+  ACT_LOGS=[];
+  ls.setItem('rbActLogs','[]');
+  renderActLogs();saveAllData();
+}
 function getThaiToday(){
   let d=new Date(Date.now()+7*3600000);
   return d.toISOString().slice(0,10);
@@ -536,7 +578,8 @@ async function syncCloud(push){
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({
           appPin:APP_PIN,adminPin:ADMIN_PIN,
-          plots:PLOTS,W:curP.W,H:curP.H
+          actLogs:ACT_LOGS,plots:PLOTS,
+          W:curP.W,H:curP.H
         })
       });
       if(!res.ok)throw 0;
@@ -562,6 +605,11 @@ async function syncCloud(push){
           ls.setItem('rbAdminPin',ADMIN_PIN);
           curAdminPinDisplay.innerText=ADMIN_PIN;
         }
+      }
+      if(d&&Array.isArray(d.actLogs)){
+        ACT_LOGS=d.actLogs;
+        ls.setItem('rbActLogs',JSON.stringify(ACT_LOGS));
+        renderActLogs();
       }
       if(d&&Array.isArray(d.plots)&&d.plots.length){
         PLOTS=normPlots(d.plots);
@@ -699,7 +747,7 @@ function calc(man){
 function save(){
   if(!+wt.value||!+prc.value)
     return alert("กรุณาใส่ราคาและน้ำหนัก");
-  let W=getW(),H=getH(),i=+wSel.value;
+  let W=getW(),H=getH(),i=+wSel.value,pName=getCurPlot().name;
   let rec={
     wid:W[i].id,wn:W[i].n,d:dt.value,pr:+prc.value,
     w:+wt.value,t:S.tot,i:S.inc,s:S.sav,p:S.net,
@@ -711,7 +759,10 @@ function save(){
     let rt=editFromTab||4,rd=dt.value;
     if(oldW&&oldW.id!==W[i].id)
       oldW.s=Math.max(0,(+oldW.s||0)-old.s);
-    W[i].s=S.newS;H[editIdx]=rec;saveAllData();
+    W[i].s=S.newS;H[editIdx]=rec;
+    addActLog(`✏️ [${pName}] แก้ไขยอดขายวันที่ ${fmtThaiDate(rec.d,true)} `
+      +`ของ ${rec.wn} (${old.w}➔${rec.w} กก., สุทธิ ${old.p}➔${rec.p} บ.)`);
+    saveAllData();
     alert("บันทึกการแก้ไขเรียบร้อย!");
     cancelEdit();tab(rt);
     if(rt===5)showDayDetail(rd);return;
@@ -774,7 +825,6 @@ function renderWList(){
       class="yel" value="${Math.round((+x.s||0)*100)/100}">
   </div>`).join('');
 }
-
 function syncWInputs(){
   getW().forEach((x,i)=>{
     let a=$('en'+i),b=$('es'+i);
@@ -796,6 +846,8 @@ function delW(i){
   if(W.length<=1)
     return alert("ต้องมีคนงานอย่างน้อย 1 คนครับ");
   if(confirm(`ยืนยันการลบ "${W[i].n}" ใช่หรือไม่?`)){
+    addActLog(`🗑️ [${getCurPlot().name}] ลบรายชื่อคนงาน "${W[i].n}" `
+      +`(สะสม ${(+W[i].s||0).toLocaleString()} บ.)`);
     syncWInputs();W.splice(i,1);renderWList();
   }
 }
@@ -838,6 +890,7 @@ function restoreOldW(wid){
     return alert(
       `มีชื่อ "${cl}" อยู่ในรายการปัจจุบันแล้วครับ`);
   W.push({id:wid,n:cl,s:sav});
+  addActLog(`♻️ [${getCurPlot().name}] ดึงคนงานเก่า "${cl}" กลับมา`);
   renderWList();showDeletedW();
   alert(`ดึง "${cl}" กลับมาเรียบร้อย! `
     +`กด "บันทึกการแก้ไขทั้งหมด" เพื่อยืนยัน`);
@@ -845,8 +898,10 @@ function restoreOldW(wid){
 function saveW(){
   let W=getW(),H=getH(),seen=new Set();
   let ids=new Set(W.map(x=>x.id));
+  let changes=[];
   for(let i=0;i<W.length;i++){
     let nm=stripNum($('en'+i)?.value||W[i].n);
+    let ns=+($('es'+i)?.value||0);
     if(!nm)return alert(
       "กรุณากรอกชื่อคนงานให้ครบทุกช่องครับ");
     let low=nm.toLowerCase();
@@ -856,8 +911,13 @@ function saveW(){
       stripNum(h.wn).toLowerCase()===low))
       return alert(`ชื่อ "${nm}" `
         +`ซ้ำกับประวัติคนงานเก่าที่ลบไปแล้วในแปลงนี้!`);
+    if(W[i].n!==nm)changes.push(`ชื่อ ${W[i].n}➔${nm}`);
+    if((+W[i].s||0)!==ns)
+      changes.push(`สะสม ${nm}: ${(+W[i].s||0).toLocaleString()}➔${ns.toLocaleString()} บ.`);
     seen.add(low);
   }
+  if(changes.length)
+    addActLog(`💰 [${getCurPlot().name}] แก้ไขข้อมูลคนงาน: `+changes.join(', '));
   syncWInputs();saveAllData();init();
   renderWList();alert("บันทึกการแก้ไขเรียบร้อย!");
 }
@@ -985,6 +1045,8 @@ function delLog(idx,fromTab,dateStr){
     +`ระบบจะหักเงินสะสมคืนให้อัตโนมัติ`))return;
   let wObj=getW().find(w=>w.id===item.wid);
   if(wObj)wObj.s=Math.max(0,(+wObj.s||0)-item.s);
+  addActLog(`🗑️ [${getCurPlot().name}] ลบรายการวันที่ ${fmtThaiDate(item.d,true)} `
+    +`ของ ${item.wn} (${item.w} กก., สุทธิ ${item.p} บ.)`);
   H.splice(idx,1);saveAllData();calc(0);
   if(fromTab===5){
     renderDaily();
@@ -1221,6 +1283,7 @@ function toggleAdminPanel(){
   if(pwd===null)return;
   if(normPin(pwd)===ADMIN_PIN){
     renderPlotSelector();
+    renderActLogs();
     curPinDisplay.innerText=APP_PIN;
     curAdminPinDisplay.innerText=ADMIN_PIN;
     newPinInp.value="";
@@ -1245,6 +1308,7 @@ function changeAppPin(){
   APP_PIN=np;ls.setItem('rbCustomPin',APP_PIN);
   ls.setItem('rbAuth',APP_PIN);
   curPinDisplay.innerText=APP_PIN;newPinInp.value="";
+  addActLog(`🔑 เปลี่ยนรหัสผ่านเข้าใช้งาน (App PIN)`);
   saveAllData();
   alert(`เปลี่ยนรหัสผ่านเป็น "${APP_PIN}" เรียบร้อยแล้ว!`);
 }
@@ -1258,6 +1322,7 @@ function changeAdminPin(){
     return;
   ADMIN_PIN=nap;ls.setItem('rbAdminPin',ADMIN_PIN);
   curAdminPinDisplay.innerText=ADMIN_PIN;newAdminPinInp.value="";
+  addActLog(`🛡️ เปลี่ยนรหัสผ่านแอดมิน (Admin PIN)`);
   saveAllData();
   alert(`เปลี่ยนรหัสผ่านแอดมินเป็น "${ADMIN_PIN}" เรียบร้อยแล้ว!`);
 }
@@ -1267,7 +1332,10 @@ function renameCurPlot(){
   if(PLOTS.some(p=>p.id!==curPlotId&&
     p.name.toLowerCase()===nm.toLowerCase()))
     return alert(`ชื่อแปลง "${nm}" ซ้ำกับแปลงอื่นครับ`);
-  getCurPlot().name=nm;saveAllData();renderPlotSelector();
+  let oldNm=getCurPlot().name;
+  getCurPlot().name=nm;
+  addActLog(`🌳 เปลี่ยนชื่อแปลง "${oldNm}" ➔ "${nm}"`);
+  saveAllData();renderPlotSelector();
   alert(`เปลี่ยนชื่อแปลงเป็น "${nm}" เรียบร้อยครับ`);
 }
 function addNewPlot(){
@@ -1282,8 +1350,9 @@ function addNewPlot(){
     id:'plot_'+Date.now(),name:nm,
     W:[{id:Date.now()+1,n:"คนงาน 1",s:0}],H:[]
   };
-  PLOTS.push(np);curPlotId=np.id;saveAllData();
-  switchPlot(curPlotId);
+  PLOTS.push(np);curPlotId=np.id;
+  addActLog(`➕ เพิ่มแปลงใหม่ "${nm}"`);
+  saveAllData();switchPlot(curPlotId);
   alert(`เพิ่ม "${nm}" และสลับมาใช้งานเรียบร้อยครับ`);
 }
 function deleteCurPlot(){
@@ -1293,6 +1362,7 @@ function deleteCurPlot(){
   if(!confirm(`⚠️ ยืนยันการลบแปลง "${curP.name}"?`)||
      !confirm(`ยืนยันครั้งสุดท้าย: ลบ "${curP.name}" ถาวร?`))
     return;
+  addActLog(`🗑️ ลบแปลง "${curP.name}"`);
   PLOTS=PLOTS.filter(p=>p.id!==curPlotId);
   curPlotId=PLOTS.at(0).id;saveAllData();switchPlot(curPlotId);
   alert("ลบแปลงเรียบร้อยแล้วครับ");
@@ -1301,6 +1371,7 @@ function clearPlotWorkers(){
   let c=getCurPlot();
   if(confirm(`⚠️ ล้างรายชื่อคนงานทั้งหมดใน "${c.name}"?`)){
     c.W=[{id:Date.now(),n:"คนงาน 1",s:0}];
+    addActLog(`🧹 [${c.name}] ล้างข้อมูลชื่อคนงานทั้งหมด`);
     saveAllData();init();renderWList();
     alert(`ล้างชื่อคนงานใน "${c.name}" เรียบร้อยครับ`);
   }
@@ -1308,7 +1379,9 @@ function clearPlotWorkers(){
 function clearPlotHistory(){
   let c=getCurPlot();
   if(confirm(`⚠️ ล้างประวัติการขายทั้งหมดใน "${c.name}"?`)){
-    c.H=[];saveAllData();init();
+    c.H=[];
+    addActLog(`🧹 [${c.name}] ล้างข้อมูลประวัติการขายทั้งหมด`);
+    saveAllData();init();
     alert(`ล้างข้อมูลการขายใน "${c.name}" เรียบร้อยครับ`);
   }
 }
@@ -1317,6 +1390,7 @@ function factoryResetPlot(){
   if(confirm(`🚨 ล้างข้อมูลทั้งหมด (Factory Reset) "${c.name}"?`)&&
      confirm(`ยืนยันครั้งสุดท้าย: ข้อมูลจะกู้คืนไม่ได้?`)){
     c.W=[{id:Date.now(),n:"คนงาน 1",s:0}];c.H=[];
+    addActLog(`🚨 [${c.name}] Factory Reset ข้อมูลทั้งหมด`);
     saveAllData();init();renderWList();
     alert(`รีเซ็ตข้อมูลทั้งหมดของ "${c.name}" เรียบร้อยครับ`);
   }
@@ -1325,7 +1399,7 @@ function doBackup(){
   let c=getCurPlot();
   let s=JSON.stringify({
     appPin:APP_PIN,adminPin:ADMIN_PIN,
-    plots:PLOTS,W:c.W,H:c.H
+    actLogs:ACT_LOGS,plots:PLOTS,W:c.W,H:c.H
   });
   bkBox.value=s;navigator.clipboard.writeText(s);
   alert("คัดลอกข้อมูลสำรองทั้งระบบเรียบร้อยแล้ว!");
@@ -1344,6 +1418,10 @@ function doRestore(){
       ADMIN_PIN=normPin(d.adminPin);
       ls.setItem('rbAdminPin',ADMIN_PIN);
     }
+    if(Array.isArray(d.actLogs)){
+      ACT_LOGS=d.actLogs;
+      ls.setItem('rbActLogs',JSON.stringify(ACT_LOGS));
+    }
     if(Array.isArray(d.plots)&&d.plots.length){
       PLOTS=normPlots(d.plots);curPlotId=PLOTS.at(0).id;
     }else if(d.W&&d.H){
@@ -1354,6 +1432,7 @@ function doRestore(){
       }]);
       curPlotId='plot_1';
     }else throw 0;
+    addActLog(`📥 กู้คืนข้อมูลทั้งระบบ (Restore)`);
     saveAllData();init();closeAdminPanel();
     alert("กู้คืนข้อมูลสำเร็จ!");tab(1);
   }catch(e){alert("รหัสข้อมูลสำรองไม่ถูกต้องครับ");}
