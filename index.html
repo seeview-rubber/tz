@@ -484,7 +484,7 @@ function getDeviceType(){
 function ensureDeviceName(){
   let dn=(DEVICES[DEV_ID]?.name)||ls.getItem('rbDevName')||"";
   while(!dn.trim()){
-    let inp=prompt("📱 กรุณาตั้งชื่อเล่นประจำเครื่องนี้ (บังคับใส่):\nเช่น เครื่องเฮีย, มือถือเจ๊, ไอแพดที่สวน");
+    let inp=prompt("📱 ใส่ชื่อเล่นประจำเครื่องนี้ :\n");
     if(inp!==null&&inp.trim())dn=inp.trim();
     else alert("⚠️ ต้องตั้งชื่อเล่นประจำเครื่องก่อนเข้าใช้งานครับ");
   }
