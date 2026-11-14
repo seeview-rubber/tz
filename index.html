@@ -268,6 +268,7 @@ th{background:#e8f5e9;text-align:center}
     <button type="button" id="btnCancelEdit" class="br hide"
       onclick="cancelEdit()">❌ ยกเลิกการแก้ไข</button>
   </div>
+
   <div id="p2" class="box hide no-print">
     <h2>💰 จัดการรายชื่อและยอดสะสม</h2>
     <div id="wList"></div>
@@ -290,6 +291,18 @@ th{background:#e8f5e9;text-align:center}
         <button type="button" class="br"
           style="width:auto;margin:0;padding:4px 10px;font-size:13px"
           onclick="closeAdminPanel()">🔒 ปิดโหมดแอดมิน</button>
+      </div>
+      <div class="admin-sec">
+        <div style="display:flex;justify-content:space-between;
+          align-items:center;margin-bottom:8px">
+          <h3 style="margin:0">📜 ประวัติการแก้ไขระบบ</h3>
+          <button type="button" class="bb"
+            style="width:auto;margin:0;padding:4px 10px;font-size:13px"
+            onclick="refreshActLogs()">🔄 รีเฟรช</button>
+        </div>
+        <div id="actLogBox" class="log-list"></div>
+        <button type="button" class="bk" style="font-size:13px"
+          onclick="clearActLogs()">🗑️ ล้างประวัติการแก้ไข</button>
       </div>
       <div class="admin-sec">
         <h3>🔑 เปลี่ยนรหัสผ่านบัญชี (App PIN)</h3>
@@ -354,18 +367,6 @@ th{background:#e8f5e9;text-align:center}
           onclick="factoryResetPlot()">
           3. ล้างข้อมูลทั้งหมด (Factory Reset แปลงนี้)</button>
       </div>
-      <div class="admin-sec">
-        <div style="display:flex;justify-content:space-between;
-          align-items:center;margin-bottom:8px">
-          <h3 style="margin:0">📜 ประวัติการแก้ไขระบบ</h3>
-          <button type="button" class="bb"
-            style="width:auto;margin:0;padding:4px 10px;font-size:13px"
-            onclick="refreshActLogs()">🔄 รีเฟรช</button>
-        </div>
-        <div id="actLogBox" class="log-list"></div>
-        <button type="button" class="bk" style="font-size:13px"
-          onclick="clearActLogs()">🗑️ ล้างประวัติการแก้ไข</button>
-      </div>
       <div class="admin-sec" style="margin-bottom:0">
         <h3>📦 สำรอง / กู้คืนข้อมูลทั้งระบบ</h3>
         <button type="button" class="bb" style="font-size:14px"
@@ -379,6 +380,7 @@ th{background:#e8f5e9;text-align:center}
       </div>
     </div>
   </div>
+
   <div id="p3" class="box hide no-print" style="overflow-x:auto">
     <h2>📊 สรุปยอดขายรายปี</h2>
     <label>เลือกปี พ.ศ.</label>
