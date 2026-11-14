@@ -744,6 +744,7 @@ function calc(man){
   vOld.innerText=base.toLocaleString();
   vNew.innerText=newS.toLocaleString()+" บ.";
 }
+
 function save(){
   if(!+wt.value||!+prc.value)
     return alert("กรุณาใส่ราคาและน้ำหนัก");
@@ -767,11 +768,15 @@ function save(){
     cancelEdit();tab(rt);
     if(rt===5)showDayDetail(rd);return;
   }
-  W[i].s=S.newS;H.push(rec);saveAllData();
+  W[i].s=S.newS;H.push(rec);
+  addActLog(`➕ [${pName}] เพิ่มยอดขายวันที่ ${fmtThaiDate(rec.d,true)} `
+    +`ของ ${rec.wn} (${rec.w} กก., สุทธิ ${rec.p.toLocaleString()} บ.)`);
+  saveAllData();
   alert("บันทึกเรียบร้อย! ยอดสะสมใหม่: "
     +S.newS.toLocaleString()+" บ.");
   wt.value="";calc(0);
 }
+
 function editLog(idx,fromTab){
   let W=getW(),item=getH()[idx];if(!item)return;
   let wIdx=W.findIndex(w=>w.id===item.wid);
