@@ -1612,7 +1612,8 @@ function doBackup(){
   bkBox.value=s;navigator.clipboard.writeText(s);
   alert("คัดลอกข้อมูลสำรองทั้งระบบเรียบร้อยแล้ว!");
 }
-function doRestore(){
+
+async function doRestore(){
   try{
     let d=JSON.parse(bkBox.value);
     if(!confirm("⚠️ การกู้คืนจะเขียนทับข้อมูลทั้งหมด ยืนยัน?"))
@@ -1644,11 +1645,28 @@ function doRestore(){
       }]);
       curPlotId='plot_1';
     }else throw 0;
+    ls.removeItem('rbDirty');
+    ls.removeItem('rbDelRids');
+    ls.removeItem('rbEditRids');
+    ls.setItem('rbPlotsV1',JSON.stringify(PLOTS));
+    ls.setItem('rbCurPlotId',curPlotId);
     addActLog(`📥 กู้คืนข้อมูลทั้งระบบ (Restore)`);
-    saveAllData();init();closeAdminPanel();
-    alert("กู้คืนข้อมูลสำเร็จ!");tab(1);
+    let curP=getCurPlot();
+    await fetch(FB_URL,{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        appPin:APP_PIN,adminPin:ADMIN_PIN,
+        actLogs:ACT_LOGS,devices:DEVICES,
+        plots:PLOTS,W:curP.W,H:curP.H
+      })
+    });
+    init();renderWList();fillPersonDropdown();
+    closeAdminPanel();
+    alert("กู้คืนข้อมูลและรายชื่อคนงานสำเร็จ!");tab(1);
   }catch(e){alert("รหัสข้อมูลสำรองไม่ถูกต้องครับ");}
 }
+
 if(ls.getItem('rbAuth')===APP_PIN){
   ensureDeviceName();
   loginBox.classList.add('hide');
