@@ -305,6 +305,13 @@ th{background:#e8f5e9;text-align:center}
           onclick="clearActLogs()">🗑️ ล้างประวัติการแก้ไข</button>
       </div>
       <div class="admin-sec">
+        <h3>📱 จัดการชื่อเรียกอุปกรณ์ทั้งหมด</h3>
+        <div id="devListBox" style="margin-top:6px"></div>
+        <div style="font-size:12px;color:#546e7a;margin-top:6px">
+          * แอดมินสามารถแก้ไขชื่อเล่นของทุกเครื่องได้จากที่นี่ (ซิงค์อัตโนมัติ)
+        </div>
+      </div>
+      <div class="admin-sec">
         <h3>🌳 จัดการแปลงขายยาง</h3>
         <label style="font-size:14px;margin-top:4px">
           ชื่อแปลงที่กำลังเลือกอยู่:</label>
@@ -435,6 +442,7 @@ th{background:#e8f5e9;text-align:center}
     <div id="slipPreview"></div>
   </div>
 </div>
+
 <script>
 const $=id=>document.getElementById(id);
 const ls=localStorage;
@@ -444,6 +452,12 @@ const FB_URL="https://seeview-rubber-default-rtdb"
 let APP_PIN=ls.getItem('rbCustomPin')||"1234";
 let ADMIN_PIN=ls.getItem('rbAdminPin')||"0955511956";
 let ACT_LOGS=JSON.parse(ls.getItem('rbActLogs')||'[]');
+let DEVICES=JSON.parse(ls.getItem('rbDevices')||'{}');
+let DEV_ID=ls.getItem('rbDevId');
+if(!DEV_ID){
+  DEV_ID='dev_'+Date.now()+'_'+Math.floor(Math.random()*1000);
+  ls.setItem('rbDevId',DEV_ID);
+}
 const normPin=s=>String(s||"").trim()
   .replace(/[๐-๙]/g,c=>"๐๑๒๓๔๕๖๗๘๙".indexOf(c));
 const stripNum=n=>String(n||"")
@@ -454,6 +468,71 @@ const MF=["มกราคม","กุมภาพันธ์","มีนาค
   "เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม",
   "สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
 
+function getDeviceType(){
+  let u=navigator.userAgent||"";
+  if(/iPhone/i.test(u))return"📱 iPhone";
+  if(/iPad/i.test(u))return"📱 iPad";
+  if(/Android/i.test(u)){
+    let m=u.match(/Android\s[\d.]+;\s([^;)]+)/);
+    let model=m?m[1].replace(/Build\/.*/,'').trim():"";
+    return"📱 Android"+(model?` (${model})`:"");
+  }
+  if(/Windows/i.test(u))return"💻 Windows";
+  if(/Mac/i.test(u))return"💻 Mac";
+  return"🖥️ อุปกรณ์อื่น";
+}
+function ensureDeviceName(){
+  let dn=(DEVICES[DEV_ID]?.name)||ls.getItem('rbDevName')||"";
+  while(!dn.trim()){
+    let inp=prompt("📱 กรุณาตั้งชื่อเล่นประจำเครื่องนี้ (บังคับใส่):\nเช่น เครื่องเฮีย, มือถือเจ๊, ไอแพดที่สวน");
+    if(inp!==null&&inp.trim())dn=inp.trim();
+    else alert("⚠️ ต้องตั้งชื่อเล่นประจำเครื่องก่อนเข้าใช้งานครับ");
+  }
+  ls.setItem('rbDevName',dn);
+  DEVICES[DEV_ID]={name:dn,type:getDeviceType(),last:Date.now()};
+  ls.setItem('rbDevices',JSON.stringify(DEVICES));
+}
+function getDeviceLabel(){
+  let dn=(DEVICES[DEV_ID]?.name)||ls.getItem('rbDevName')||"";
+  let dt=getDeviceType();
+  return dn?`${dt} [${dn}]`:dt;
+}
+function renderDeviceList(){
+  if(!$('devListBox'))return;
+  let keys=Object.keys(DEVICES);
+  if(!keys.length){
+    devListBox.innerHTML=`<p style="font-size:13px;color:#78909c">ยังไม่มีข้อมูลอุปกรณ์</p>`;
+    return;
+  }
+  devListBox.innerHTML=keys.map(k=>{
+    let d=DEVICES[k],isMe=k===DEV_ID?' (เครื่องนี้)':'';
+    return`<div style="border:1px solid #cfd8dc;padding:8px;border-radius:6px;margin-bottom:6px;background:#fafafa">
+      <div style="font-size:12px;color:#37474f;margin-bottom:4px">
+        <b>${d.type}</b><span style="color:#2e7d32;font-weight:bold">${isMe}</span>
+      </div>
+      <div style="display:flex;gap:6px">
+        <input type="text" id="dvinp_${k}" value="${d.name||''}"
+          style="font-size:15px;padding:6px 8px" placeholder="ชื่อเล่นเครื่อง">
+        <button type="button" class="bg"
+          style="width:auto;margin:0;padding:6px 10px;font-size:13px;white-space:nowrap"
+          onclick="adminRenameDev('${k}')">💾 บันทึก</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function adminRenameDev(k){
+  let el=$('dvinp_'+k);if(!el)return;
+  let nm=String(el.value||"").trim();
+  if(!nm)return alert("กรุณากรอกชื่อเล่นเครื่องครับ");
+  let oldNm=DEVICES[k]?.name||"";
+  if(oldNm===nm)return;
+  DEVICES[k].name=nm;
+  if(k===DEV_ID)ls.setItem('rbDevName',nm);
+  ls.setItem('rbDevices',JSON.stringify(DEVICES));
+  addActLog(`📱 แอดมินเปลี่ยนชื่ออุปกรณ์ "${oldNm}" ➔ "${nm}"`);
+  saveAllData();renderDeviceList();
+  alert(`เปลี่ยนชื่ออุปกรณ์เป็น "${nm}" เรียบร้อยครับ`);
+}
 function addActLog(msg){
   let d=new Date();
   let tm=d.toLocaleDateString('th-TH',{
@@ -461,7 +540,7 @@ function addActLog(msg){
   })+" "+d.toLocaleTimeString('th-TH',{
     hour:'2-digit',minute:'2-digit'
   });
-  ACT_LOGS.unshift({t:tm,m:msg});
+  ACT_LOGS.unshift({t:tm,dev:getDeviceLabel(),m:msg});
   if(ACT_LOGS.length>100)ACT_LOGS.length=100;
   ls.setItem('rbActLogs',JSON.stringify(ACT_LOGS));
   renderActLogs();
@@ -470,7 +549,7 @@ function renderActLogs(){
   if(!$('actLogBox'))return;
   actLogBox.innerHTML=ACT_LOGS.length?
     ACT_LOGS.map(x=>`<div class="log-item">
-      <span class="log-time">🕒 ${x.t}</span>
+      <span class="log-time">🕒 ${x.t}${x.dev?` • <b>${x.dev}</b>`:''}</span>
       <span>${x.m}</span></div>`).join(''):
     `<p style="color:#78909c;text-align:center;margin:10px 0">
       ยังไม่มีประวัติการแก้ไขระบบ</p>`;
@@ -486,7 +565,7 @@ async function refreshActLogs(){
   actLogBox.innerHTML=`<p style="color:#1565c0;text-align:center;margin:10px 0">
     ⏳ กำลังดึงข้อมูลล่าสุด...</p>`;
   await syncCloud(0);
-  renderActLogs();
+  renderActLogs();renderDeviceList();
 }
 function getThaiToday(){
   let d=new Date(Date.now()+7*3600000);
@@ -494,16 +573,18 @@ function getThaiToday(){
 }
 function checkPin(){
   if(normPin(pinInp.value)===APP_PIN){
+    ensureDeviceName();
     ls.setItem('rbAuth',APP_PIN);
     pinErr.classList.add('hide');
     loginBox.classList.add('hide');
     appMain.classList.remove('hide');
-    init();syncCloud(0);
+    init();syncCloud(1);
   }else{
     pinErr.classList.remove('hide');
     pinInp.value="";pinInp.focus();
   }
 }
+
 function lockApp(){
   ls.removeItem('rbAuth');closeAdminPanel();
   pinInp.value="";appMain.classList.add('hide');
@@ -558,6 +639,7 @@ let S={tot:0,inc:0,sav:0,net:0,newS:0};
 let editIdx=-1,editFromTab=4;
 let curSlipItems=[],curTab=1;
 dt.value=getThaiToday();
+
 function renderPlotSelector(){
   plotBar.classList.toggle('hide',
     PLOTS.length<=1);
@@ -587,13 +669,20 @@ async function syncCloud(push){
       syncStatus.innerText=
         "🔄 กำลังซิงค์ข้อมูลขึ้นออนไลน์...";
       let curP=getCurPlot();
+      if(ls.getItem('rbDevName')){
+        DEVICES[DEV_ID]={
+          name:ls.getItem('rbDevName'),
+          type:getDeviceType(),last:Date.now()
+        };
+        ls.setItem('rbDevices',JSON.stringify(DEVICES));
+      }
       let res=await fetch(FB_URL,{
         method:'PUT',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({
           appPin:APP_PIN,adminPin:ADMIN_PIN,
-          actLogs:ACT_LOGS,plots:PLOTS,
-          W:curP.W,H:curP.H
+          actLogs:ACT_LOGS,devices:DEVICES,
+          plots:PLOTS,W:curP.W,H:curP.H
         })
       });
       if(!res.ok)throw 0;
@@ -619,6 +708,13 @@ async function syncCloud(push){
           ls.setItem('rbAdminPin',ADMIN_PIN);
           curAdminPinDisplay.innerText=ADMIN_PIN;
         }
+      }
+      if(d&&d.devices&&typeof d.devices==='object'){
+        DEVICES={...DEVICES,...d.devices};
+        if(DEVICES[DEV_ID]?.name)
+          ls.setItem('rbDevName',DEVICES[DEV_ID].name);
+        ls.setItem('rbDevices',JSON.stringify(DEVICES));
+        renderDeviceList();
       }
       if(d&&Array.isArray(d.actLogs)){
         ACT_LOGS=d.actLogs;
@@ -663,6 +759,7 @@ async function syncCloud(push){
     syncStatus.style.color="#c62828";
   }
 }
+
 window.addEventListener('online',()=>{
   if(ls.getItem('rbAuth')===APP_PIN)syncCloud(0);
 });
@@ -1297,6 +1394,7 @@ function renderSlipPreview(){
     `<p style="color:#c62828;text-align:center">
       กรุณาติ๊กเลือกอย่างน้อย 1 รายการเพื่อพิมพ์สลิป</p>`;
 }
+
 function toggleAdminPanel(){
   if(!adminPanel.classList.contains('hide'))
     return closeAdminPanel();
@@ -1305,6 +1403,7 @@ function toggleAdminPanel(){
   if(normPin(pwd)===ADMIN_PIN){
     renderPlotSelector();
     refreshActLogs();
+    renderDeviceList();
     curPinDisplay.innerText=APP_PIN;
     curAdminPinDisplay.innerText=ADMIN_PIN;
     newPinInp.value="";
@@ -1420,7 +1519,8 @@ function doBackup(){
   let c=getCurPlot();
   let s=JSON.stringify({
     appPin:APP_PIN,adminPin:ADMIN_PIN,
-    actLogs:ACT_LOGS,plots:PLOTS,W:c.W,H:c.H
+    actLogs:ACT_LOGS,devices:DEVICES,
+    plots:PLOTS,W:c.W,H:c.H
   });
   bkBox.value=s;navigator.clipboard.writeText(s);
   alert("คัดลอกข้อมูลสำรองทั้งระบบเรียบร้อยแล้ว!");
@@ -1438,6 +1538,10 @@ function doRestore(){
     if(d.adminPin&&/^\d{4,}$/.test(normPin(d.adminPin))){
       ADMIN_PIN=normPin(d.adminPin);
       ls.setItem('rbAdminPin',ADMIN_PIN);
+    }
+    if(d.devices&&typeof d.devices==='object'){
+      DEVICES=d.devices;
+      ls.setItem('rbDevices',JSON.stringify(DEVICES));
     }
     if(Array.isArray(d.actLogs)){
       ACT_LOGS=d.actLogs;
@@ -1459,6 +1563,7 @@ function doRestore(){
   }catch(e){alert("รหัสข้อมูลสำรองไม่ถูกต้องครับ");}
 }
 if(ls.getItem('rbAuth')===APP_PIN){
+  ensureDeviceName();
   loginBox.classList.add('hide');
   appMain.classList.remove('hide');
   init();syncCloud(0);
