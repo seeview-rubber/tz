@@ -355,7 +355,13 @@ th{background:#e8f5e9;text-align:center}
           3. ล้างข้อมูลทั้งหมด (Factory Reset แปลงนี้)</button>
       </div>
       <div class="admin-sec">
-        <h3>📜 ประวัติการแก้ไขระบบ (Activity Log)</h3>
+        <div style="display:flex;justify-content:space-between;
+          align-items:center;margin-bottom:8px">
+          <h3 style="margin:0">📜 ประวัติการแก้ไขระบบ</h3>
+          <button type="button" class="bb"
+            style="width:auto;margin:0;padding:4px 10px;font-size:13px"
+            onclick="refreshActLogs()">🔄 รีเฟรช</button>
+        </div>
         <div id="actLogBox" class="log-list"></div>
         <button type="button" class="bk" style="font-size:13px"
           onclick="clearActLogs()">🗑️ ล้างประวัติการแก้ไข</button>
@@ -373,7 +379,6 @@ th{background:#e8f5e9;text-align:center}
       </div>
     </div>
   </div>
-
   <div id="p3" class="box hide no-print" style="overflow-x:auto">
     <h2>📊 สรุปยอดขายรายปี</h2>
     <label>เลือกปี พ.ศ.</label>
@@ -457,6 +462,7 @@ function addActLog(msg){
   ACT_LOGS.unshift({t:tm,m:msg});
   if(ACT_LOGS.length>100)ACT_LOGS.length=100;
   ls.setItem('rbActLogs',JSON.stringify(ACT_LOGS));
+  renderActLogs();
 }
 function renderActLogs(){
   if(!$('actLogBox'))return;
@@ -472,6 +478,13 @@ function clearActLogs(){
   ACT_LOGS=[];
   ls.setItem('rbActLogs','[]');
   renderActLogs();saveAllData();
+}
+async function refreshActLogs(){
+  if(!$('actLogBox'))return;
+  actLogBox.innerHTML=`<p style="color:#1565c0;text-align:center;margin:10px 0">
+    ⏳ กำลังดึงข้อมูลล่าสุด...</p>`;
+  await syncCloud(0);
+  renderActLogs();
 }
 function getThaiToday(){
   let d=new Date(Date.now()+7*3600000);
@@ -543,7 +556,6 @@ let S={tot:0,inc:0,sav:0,net:0,newS:0};
 let editIdx=-1,editFromTab=4;
 let curSlipItems=[],curTab=1;
 dt.value=getThaiToday();
-
 function renderPlotSelector(){
   plotBar.classList.toggle('hide',
     PLOTS.length<=1);
@@ -744,7 +756,6 @@ function calc(man){
   vOld.innerText=base.toLocaleString();
   vNew.innerText=newS.toLocaleString()+" บ.";
 }
-
 function save(){
   if(!+wt.value||!+prc.value)
     return alert("กรุณาใส่ราคาและน้ำหนัก");
@@ -776,7 +787,6 @@ function save(){
     +S.newS.toLocaleString()+" บ.");
   wt.value="";calc(0);
 }
-
 function editLog(idx,fromTab){
   let W=getW(),item=getH()[idx];if(!item)return;
   let wIdx=W.findIndex(w=>w.id===item.wid);
@@ -808,7 +818,11 @@ function tab(n){
     e.classList.toggle('hide',i+1!=n));
   [m1,m2,m3,m4,m5,m6].forEach((e,i)=>
     e.classList.toggle('act',i+1==n));
-  if(n==2){delWBox.innerHTML="";renderWList();renderPlotSelector();}
+  if(n==2){
+    delWBox.innerHTML="";renderWList();renderPlotSelector();
+    if(!adminPanel.classList.contains('hide'))refreshActLogs();
+    else renderActLogs();
+  }
   if(n==3){fillYears();renderYear();}
   if(n==4){fillPersonDropdown();fillYears();renderPerson();}
   if(n==5){fillYears();renderDaily();}
@@ -1288,7 +1302,7 @@ function toggleAdminPanel(){
   if(pwd===null)return;
   if(normPin(pwd)===ADMIN_PIN){
     renderPlotSelector();
-    renderActLogs();
+    refreshActLogs();
     curPinDisplay.innerText=APP_PIN;
     curAdminPinDisplay.innerText=ADMIN_PIN;
     newPinInp.value="";
