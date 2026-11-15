@@ -1123,11 +1123,15 @@ function init(){
     `<option value="${i}">${x.n}</option>`
   ).join('');
   $('wSel').value=W[v]?v:0;
+    let curMo = $('dMoSel').value;
   $('dMoSel').innerHTML=
     `<option value="all">ทุกเดือน</option>`+
     MF.map((m,i)=>
       `<option value="${i}">${m}</option>`
     ).join('');
+  let nowMo = new Date(Date.now()+7*3600000).getMonth();
+  $('dMoSel').value = curMo !== "" ? curMo : nowMo;
+
   calc(0);
 }
 function fillPersonDropdown(){
