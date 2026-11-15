@@ -861,6 +861,7 @@ let editIdx=-1,editFromTab=4;
 let curSlipItems=[],curTab=1;
 dt.value=getThaiToday();
 
+let isSyncing=false;
 function mergeCloudPlots(cloudArr){
   let cPlots=normPlots(cloudArr),addedCnt=0;
   let delRids=new Set(JSON.parse(
@@ -871,6 +872,8 @@ function mergeCloudPlots(cloudArr){
     ls.getItem('rbNewPids')||'[]'));
   let delPids=new Set(JSON.parse(
     ls.getItem('rbDelPids')||'[]'));
+  let delWids=new Set(JSON.parse(
+    ls.getItem('rbDelWids')||'[]'));
   let finalPlots=[];
 
   cPlots.forEach(cp=>{
@@ -884,9 +887,7 @@ function mergeCloudPlots(cloudArr){
       if(delRids.has(ch.rid))return;
       if(editRids.has(ch.rid)&&lMap.has(ch.rid)){
         mergedH.push(lMap.get(ch.rid));
-      }else{
-        mergedH.push(ch);
-      }
+      }else mergedH.push(ch);
     });
     lp.H.forEach(lh=>{
       if(!cMap.has(lh.rid)&&!delRids.has(lh.rid)){
@@ -899,9 +900,14 @@ function mergeCloudPlots(cloudArr){
       }
     });
     cp.H=mergedH;
-    cp.W=cp.W.map(cw=>{
-      let lw=lp.W.find(w=>w.id===cw.id);
-      return lw&&editRids.has('w_'+cw.id)?lw:cw;
+    cp.W=cp.W.filter(cw=>!delWids.has(cw.id))
+      .map(cw=>{
+        let lw=lp.W.find(w=>w.id===cw.id);
+        return lw&&editRids.has('w_'+cw.id)?lw:cw;
+      });
+    lp.W.forEach(lw=>{
+      if(!cp.W.some(cw=>cw.id===lw.id)&&
+         !delWids.has(lw.id))cp.W.push(lw);
     });
     finalPlots.push(cp);
   });
@@ -919,15 +925,13 @@ function mergeCloudPlots(cloudArr){
       W:[{id:Date.now(),n:"คนงาน 1",s:0}],H:[]
     }]);
   }
-
   PLOTS=finalPlots;
   if(!PLOTS.some(p=>p.id===curPlotId)){
     curPlotId=PLOTS.at(0).id;
     ls.setItem('rbCurPlotId',curPlotId);
   }
-
-  ['rbDelRids','rbEditRids',
-   'rbNewPids','rbDelPids'].forEach(k=>
+  ['rbDelRids','rbEditRids','rbNewPids',
+   'rbDelPids','rbDelWids'].forEach(k=>
     ls.removeItem(k));
   ls.setItem('rbPlotsV1',JSON.stringify(PLOTS));
   return addedCnt;
@@ -955,6 +959,8 @@ function switchPlot(pid){
   if(curTab==6)initSlipPage();
 }
 async function syncCloud(push){
+  if(isSyncing&&!push)return;
+  isSyncing=true;
   let dirty=ls.getItem('rbDirty')==='1',mergedCnt=0;
   try{
     if(push||dirty){
@@ -978,11 +984,9 @@ async function syncCloud(push){
         if(dirty&&Array.isArray(oldD?.plots)&&
           oldD.plots.length){
           mergedCnt=mergeCloudPlots(oldD.plots);
-          if(mergedCnt>0){
-            addActLog(
-              `🔄 ผสานข้อมูลค้างส่ง (${mergedCnt} รายการ)`
-            );
-          }
+          if(mergedCnt>0)addActLog(
+            `🔄 ผสานข้อมูลค้างส่ง (${mergedCnt} รายการ)`
+          );
         }
       }
       let curP=getCurPlot();
@@ -1099,8 +1103,11 @@ async function syncCloud(push){
       "🔴 ไม่มีเน็ต (บันทึกในเครื่องแล้ว รอซิงค์)";
     syncStatus.style.background="#ffebee";
     syncStatus.style.color="#c62828";
+  }finally{
+    isSyncing=false;
   }
 }
+
 
 window.addEventListener('online',()=>{
   if(ls.getItem('rbAuthHash')===APP_HASH)
@@ -1348,17 +1355,23 @@ function addW(){
   W.push({id:Date.now(),n:nm,s:0});
   renderWList();
 }
+
 function delW(i){
   let W=getW();
   if(W.length<=1)
     return alert("ต้องมีคนงานอย่างน้อย 1 คนครับ");
   if(confirm(`ยืนยันการลบ "${W[i].n}"?`)){
+    let dw=JSON.parse(
+      ls.getItem('rbDelWids')||'[]');
+    if(!dw.includes(W[i].id))dw.push(W[i].id);
+    ls.setItem('rbDelWids',JSON.stringify(dw));
     addActLog(
       `🗑️ [${getCurPlot().name}] ลบ "${W[i].n}"`
     );
     syncWInputs();W.splice(i,1);renderWList();
   }
 }
+
 function showDeletedW(){
   let W=getW(),ids=new Set(W.map(x=>x.id));
   let dm=new Map();
