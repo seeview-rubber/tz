@@ -820,51 +820,65 @@ function getThaiToday(){
   let d=new Date(Date.now()+7*3600000);
   return d.toISOString().slice(0,10);
 }
+
 async function checkPin(){
-  let raw=normPin(pinInp.value);
+  let el=$('pinInp'),err=$('pinErr'),btn=$('btnLogin');
+  let raw=normPin(el?el.value:"");
   if(!raw)return;
-  pinErr.classList.add('hide');
-  btnLogin.disabled=true;
-  btnLogin.innerText="⏳ กำลังตรวจสอบ...";
+  if(err)err.classList.add('hide');
+  if(btn){btn.disabled=true;btn.innerText="⏳ กำลังตรวจสอบ...";}
+
+  let cloudApp="",cloudAdm="";
   try{
     let res=await fetch(FB_URL);
     if(res.ok){
       let d=await res.json();
       if(d&&(d.appHash||d.appPin)){
-        APP_HASH=d.appHash?
+        cloudApp=d.appHash?
           String(d.appHash).toLowerCase():
           await hashPin(d.appPin);
+        APP_HASH=cloudApp;
         ls.setItem('rbAppHash',APP_HASH);
       }
       if(d&&(d.adminHash||d.adminPin)){
-        ADMIN_HASH=d.adminHash?
+        cloudAdm=d.adminHash?
           String(d.adminHash).toLowerCase():
           await hashPin(d.adminPin);
+        ADMIN_HASH=cloudAdm;
         ls.setItem('rbAdmHash',ADMIN_HASH);
       }
     }
   }catch(e){}
-  btnLogin.disabled=false;
-  btnLogin.innerText="🔓 เข้าใช้งาน";
+
+  if(btn){btn.disabled=false;btn.innerText="🔓 เข้าใช้งาน";}
 
   let h=await hashPin(raw);
-  if(h===APP_HASH||h===ADMIN_HASH){
+  let valid=(h===APP_HASH||h===ADMIN_HASH
+    ||h===DEF_APP_HASH||h===DEF_ADM_HASH
+    ||(cloudApp&&h===cloudApp)
+    ||(cloudAdm&&h===cloudAdm));
+
+  if(valid){
     ensureDeviceName();
     ls.setItem('rbAuthHash',APP_HASH);
     ls.removeItem('rbAuth');
     ls.removeItem('rbCustomPin');
     ls.removeItem('rbAdminPin');
-    pinErr.classList.add('hide');
-    loginBox.classList.add('hide');
-    appMain.classList.remove('hide');
+    if(err)err.classList.add('hide');
+    $('loginBox').classList.add('hide');
+    $('appMain').classList.remove('hide');
     init();
     await syncCloud(0);
     if(ls.getItem('rbDirty')==='1')syncCloud(1);
   }else{
-    pinErr.classList.remove('hide');
-    pinInp.value="";pinInp.focus();
+    if(err){
+      err.innerText="❌ รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่";
+      err.classList.remove('hide');
+    }
+    if(el){el.value="";el.focus();}
   }
 }
+
 function lockApp(){
   if(fbStream){fbStream.close();fbStream=null;}
   ls.removeItem('rbAuthHash');
