@@ -653,6 +653,25 @@ const DEF_ADM_HASH=
   +"a6042243683f894f6322b3e3009a6443";
 
 let APP_VER=ls.getItem('rbAppVer')||'v1';
+
+let pendingVer="";
+function checkPendingUpdate(){
+  if(!pendingVer||pendingVer===APP_VER)return;
+  let isBusy=ls.getItem('rbDirty')==='1'
+    ||editIdx>=0
+    ||String(wt?.value||"").trim()!==""
+    ||document.activeElement?.tagName==='INPUT';
+  if(isBusy)return;
+
+  let v=pendingVer;
+  pendingVer="";
+  ls.setItem('rbAppVer',v);
+  alert("🔄 มีอัปเดตระบบเวอร์ชันใหม่ กำลังรีเฟรชหน้าจอ...");
+  let url=new URL(location.href);
+  url.searchParams.set('v',v);
+  location.replace(url.toString());
+}
+
 let APP_HASH=ls.getItem('rbAppHash')||DEF_APP_HASH;
 let ADMIN_HASH=ls.getItem('rbAdmHash')||DEF_ADM_HASH;
 let ACT_LOGS=JSON.parse(
@@ -996,7 +1015,17 @@ function refreshCurrentView(){
 }
 async function applyCloudData(d){
   if(!d)return false;
-  if(d.appVer){
+    if(d?.appVer){
+    if(!ls.getItem('rbAppVer')){
+      APP_VER=d.appVer;
+      ls.setItem('rbAppVer',APP_VER);
+    }else if(d.appVer!==APP_VER){
+      pendingVer=d.appVer;
+      checkPendingUpdate();
+      if(pendingVer)return false;
+    }
+  }
+
     if(!ls.getItem('rbAppVer')){
       APP_VER=d.appVer;
       ls.setItem('rbAppVer',APP_VER);
@@ -1194,10 +1223,14 @@ document.addEventListener('visibilitychange',()=>{
     startCloudStream();
   }
 });
+
 setInterval(()=>{
   if(ls.getItem('rbAuthHash')!==APP_HASH)return;
   if(ls.getItem('rbDirty')==='1')syncCloud(1);
-},15000);
+  checkPendingUpdate();
+},5000);
+
+
 function markEditRid(id){
   let a=JSON.parse(ls.getItem('rbEditRids')||'[]');
   if(!a.includes(id)){
