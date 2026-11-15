@@ -1040,7 +1040,7 @@ function startCloudStream(){
       if(!pkt||pkt.path!=='/'||!pkt.data)return;
       let needPush=await applyCloudData(pkt.data);
       let tm=new Date().toLocaleTimeString('th-TH');
-      syncStatus.innerText=`🟢 ซิงค์สดอัตโนมัติ (${tm})`;
+      syncStatus.innerText=`🟢 เชื่อมต่อฐานข้อมูลแล้ว (${tm})`;
       syncStatus.style.background="#e8f5e9";
       syncStatus.style.color="#1b5e20";
       if(needPush)await syncCloud(1);
@@ -1049,7 +1049,7 @@ function startCloudStream(){
   fbStream.addEventListener('put',onMsg);
   fbStream.addEventListener('patch',onMsg);
   fbStream.onerror=()=>{
-    syncStatus.innerText="🟡 กำลังเชื่อมต่อซิงค์สดใหม่...";
+    syncStatus.innerText="🟡 กำลังเชื่อมต่อฐานข้อมูล...";
     syncStatus.style.background="#fff8e1";
     syncStatus.style.color="#e65100";
   };
@@ -1077,7 +1077,7 @@ async function syncCloud(push){
         if(dirty&&Array.isArray(oldD?.plots)&&oldD.plots.length){
           mergedCnt=mergeCloudPlots(oldD.plots);
           if(mergedCnt>0)addActLog(
-            `🔄 ผสานข้อมูลค้างส่ง (${mergedCnt} รายการ)`
+            `🔄 เชื่อมข้อมูลค้างส่ง (${mergedCnt} รายการ)`
           );
         }
       }
