@@ -897,6 +897,8 @@ dt.value=getThaiToday();
 let isSyncing=false,fbStream=null;
 
 let isReloading=false;
+
+let isReloading=false;
 function checkPendingUpdate(){
   if(isReloading||!pendingVer||pendingVer===APP_VER)return;
   let isBusy=ls.getItem('rbDirty')==='1'
@@ -910,11 +912,29 @@ function checkPendingUpdate(){
   pendingVer="";
   APP_VER=v;
   ls.setItem('rbAppVer',v);
-  alert("🔄 มีอัปเดตระบบเวอร์ชันใหม่ กำลังรีเฟรชหน้าจอ...");
+  syncStatus.innerText="🔄 กำลังอัปเดตหน้าเว็บเวอร์ชันใหม่...";
+  syncStatus.style.background="#fff8e1";
+  syncStatus.style.color="#e65100";
+  setTimeout(()=>{
+    let url=new URL(location.href);
+    url.searchParams.set('v',v);
+    location.replace(url.toString());
+  },600);
+}
+
+async function forceUpdateAll(){
+  if(!confirm("⚠️ ยืนยันการส่งสัญญาณรีเฟรชอัปเดตหน้าเว็บไปยังทุกเครื่อง?\n(ต้องอัปไฟล์ขึ้นโฮสต์เสร็จแล้วเท่านั้น)"))return;
+  let newVer='v_'+Date.now();
+  APP_VER=newVer;
+  ls.setItem('rbAppVer',newVer);
+  addActLog(`📢 สั่งอัปเดตหน้าเว็บทุกเครื่อง (${newVer})`);
+  isReloading=true;
+  await syncCloud(1);
   let url=new URL(location.href);
-  url.searchParams.set('v',v);
+  url.searchParams.set('v',newVer);
   location.replace(url.toString());
 }
+
 
 function mergeCloudPlots(cloudArr){
   let cPlots=normPlots(cloudArr),addedCnt=0;
@@ -1120,16 +1140,14 @@ function startCloudStream(){
     syncStatus.style.color="#e65100";
   };
 }
-async function syncCloud(push){
-  if(isSyncing&&!push)return;
-  isSyncing=true;
-  let dirty=ls.getItem('rbDirty')==='1',mergedCnt=0;
-  try{
-    if(push||dirty){
-      syncStatus.innerText="🔄 กำลังซิงค์ข้อมูลขึ้นออนไลน์...";
-      let pre=await fetch(FB_URL);
+
       if(pre.ok){
         let oldD=await pre.json();
+        if(oldD?.appVer&&!isReloading){
+          if(oldD.appVer!==APP_VER)pendingVer=oldD.appVer;
+          APP_VER=oldD.appVer;
+          ls.setItem('rbAppVer',APP_VER);
+        }
         if(oldD?.devices)
           DEVICES={...oldD.devices,...DEVICES};
         if(Array.isArray(oldD?.actLogs)){
@@ -1147,6 +1165,7 @@ async function syncCloud(push){
           );
         }
       }
+
       let curP=getCurPlot();
       if(ls.getItem('rbDevName')){
         DEVICES[DEV_ID]={
