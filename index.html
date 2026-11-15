@@ -427,7 +427,7 @@ th{background:#e8f5e9;text-align:center}
         style="font-size:12px;color:#999;cursor:pointer"
         onclick="toggleAdminPanel()">⚙️ ตั้งค่าขั้นสูง</span>
     </div>
-        <div id="adminPanel" class="admin-box hide">
+    <div id="adminPanel" class="admin-box hide">
       <div style="display:flex;
         justify-content:space-between;
         align-items:center;margin-bottom:10px">
@@ -565,7 +565,6 @@ th{background:#e8f5e9;text-align:center}
           📥 นำเข้าข้อมูลกู้คืน</button>
       </div>
     </div>
-
   </div>
 
   <div id="p3" class="box hide no-print"
@@ -653,25 +652,7 @@ const DEF_ADM_HASH=
   +"a6042243683f894f6322b3e3009a6443";
 
 let APP_VER=ls.getItem('rbAppVer')||'v1';
-
 let pendingVer="";
-function checkPendingUpdate(){
-  if(!pendingVer||pendingVer===APP_VER)return;
-  let isBusy=ls.getItem('rbDirty')==='1'
-    ||editIdx>=0
-    ||String(wt?.value||"").trim()!==""
-    ||document.activeElement?.tagName==='INPUT';
-  if(isBusy)return;
-
-  let v=pendingVer;
-  pendingVer="";
-  ls.setItem('rbAppVer',v);
-  alert("🔄 มีอัปเดตระบบเวอร์ชันใหม่ กำลังรีเฟรชหน้าจอ...");
-  let url=new URL(location.href);
-  url.searchParams.set('v',v);
-  location.replace(url.toString());
-}
-
 let APP_HASH=ls.getItem('rbAppHash')||DEF_APP_HASH;
 let ADMIN_HASH=ls.getItem('rbAdmHash')||DEF_ADM_HASH;
 let ACT_LOGS=JSON.parse(
@@ -914,6 +895,22 @@ let curSlipItems=[],curTab=1;
 dt.value=getThaiToday();
 
 let isSyncing=false,fbStream=null;
+function checkPendingUpdate(){
+  if(!pendingVer||pendingVer===APP_VER)return;
+  let isBusy=ls.getItem('rbDirty')==='1'
+    ||editIdx>=0
+    ||String(wt?.value||"").trim()!==""
+    ||document.activeElement?.tagName==='INPUT';
+  if(isBusy)return;
+
+  let v=pendingVer;
+  pendingVer="";
+  ls.setItem('rbAppVer',v);
+  alert("🔄 มีอัปเดตระบบเวอร์ชันใหม่ กำลังรีเฟรชหน้าจอ...");
+  let url=new URL(location.href);
+  url.searchParams.set('v',v);
+  location.replace(url.toString());
+}
 function mergeCloudPlots(cloudArr){
   let cPlots=normPlots(cloudArr),addedCnt=0;
   let delRids=new Set(JSON.parse(
@@ -1015,7 +1012,7 @@ function refreshCurrentView(){
 }
 async function applyCloudData(d){
   if(!d)return false;
-    if(d?.appVer){
+  if(d.appVer){
     if(!ls.getItem('rbAppVer')){
       APP_VER=d.appVer;
       ls.setItem('rbAppVer',APP_VER);
@@ -1023,25 +1020,6 @@ async function applyCloudData(d){
       pendingVer=d.appVer;
       checkPendingUpdate();
       if(pendingVer)return false;
-    }
-  }
-
-    if(!ls.getItem('rbAppVer')){
-      APP_VER=d.appVer;
-      ls.setItem('rbAppVer',APP_VER);
-    }else if(d.appVer!==APP_VER){
-      let isBusy=ls.getItem('rbDirty')==='1'
-        ||editIdx>=0
-        ||String(wt?.value||"").trim()!==""
-        ||document.activeElement?.tagName==='INPUT';
-      if(isBusy)return false;
-
-      ls.setItem('rbAppVer',d.appVer);
-      alert("🔄 มีอัปเดตระบบเวอร์ชันใหม่ กำลังรีเฟรชหน้าจอ...");
-      let url=new URL(location.href);
-      url.searchParams.set('v',d.appVer);
-      location.replace(url.toString());
-      return false;
     }
   }
   let needPushHash=false,changed=false;
@@ -1206,6 +1184,7 @@ async function syncCloud(push){
     syncStatus.style.color="#c62828";
   }finally{
     isSyncing=false;
+    checkPendingUpdate();
   }
 }
 window.addEventListener('online',()=>{
@@ -1223,14 +1202,11 @@ document.addEventListener('visibilitychange',()=>{
     startCloudStream();
   }
 });
-
 setInterval(()=>{
   if(ls.getItem('rbAuthHash')!==APP_HASH)return;
   if(ls.getItem('rbDirty')==='1')syncCloud(1);
   checkPendingUpdate();
 },5000);
-
-
 function markEditRid(id){
   let a=JSON.parse(ls.getItem('rbEditRids')||'[]');
   if(!a.includes(id)){
