@@ -895,22 +895,27 @@ let curSlipItems=[],curTab=1;
 dt.value=getThaiToday();
 
 let isSyncing=false,fbStream=null;
+
+let isReloading=false;
 function checkPendingUpdate(){
-  if(!pendingVer||pendingVer===APP_VER)return;
+  if(isReloading||!pendingVer||pendingVer===APP_VER)return;
   let isBusy=ls.getItem('rbDirty')==='1'
     ||editIdx>=0
     ||String(wt?.value||"").trim()!==""
     ||document.activeElement?.tagName==='INPUT';
   if(isBusy)return;
 
+  isReloading=true;
   let v=pendingVer;
   pendingVer="";
+  APP_VER=v;
   ls.setItem('rbAppVer',v);
   alert("🔄 มีอัปเดตระบบเวอร์ชันใหม่ กำลังรีเฟรชหน้าจอ...");
   let url=new URL(location.href);
   url.searchParams.set('v',v);
   location.replace(url.toString());
 }
+
 function mergeCloudPlots(cloudArr){
   let cPlots=normPlots(cloudArr),addedCnt=0;
   let delRids=new Set(JSON.parse(
@@ -1932,6 +1937,7 @@ function closeAdminPanel(){
   btnAdminToggle.classList.remove('hide');
   bkBox.value="";
 }
+
 async function forceUpdateAll(){
   if(!confirm("⚠️ ยืนยันการส่งสัญญาณรีเฟรชอัปเดตหน้าเว็บไปยังทุกเครื่อง?\n(ต้องอัปไฟล์ขึ้นโฮสต์เสร็จแล้วเท่านั้น)"))return;
   let newVer='v_'+Date.now();
@@ -1939,8 +1945,14 @@ async function forceUpdateAll(){
   ls.setItem('rbAppVer',newVer);
   addActLog(`📢 สั่งอัปเดตหน้าเว็บทุกเครื่อง (${newVer})`);
   await syncCloud(1);
-  alert("✅ ส่งสัญญาณอัปเดตเรียบร้อยแล้ว! เครื่องอื่นจะรีเฟรชอัตโนมัติเมื่อปลอดภัยครับ");
+  isReloading=true;
+  alert("✅ ส่งสัญญาณอัปเดตเรียบร้อยแล้ว! กำลังรีเฟรชหน้าจอเครื่องนี้ด้วย...");
+  let url=new URL(location.href);
+  url.searchParams.set('v',newVer);
+  location.replace(url.toString());
 }
+
+
 async function changeAppPin(){
   let np=normPin(newPinInp.value);
   if(!/^\d{4,}$/.test(np))
