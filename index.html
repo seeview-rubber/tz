@@ -1308,23 +1308,14 @@ function editLog(idx,fromTab){
   btnSave.innerText="💾 บันทึกการแก้ไขรายการนี้";
   btnSave.className="bo";calc(1);tab(1);
 }
-
 function cancelEdit(){
-  let wasEdit=editIdx>=0;
-  let rt=editFromTab||4;
-  let rd=dt.value;
   editIdx=-1;wt.value="";dt.value=getThaiToday();
   p1Title.innerText="🌳 จดขายขี้ยางก้อน";
   editBanner.classList.add('hide');
   btnCancelEdit.classList.add('hide');
   btnSave.innerText="💾 บันทึกยอดเงินนี้";
   btnSave.className="bg";calc(0);
-  if(wasEdit){
-    tab(rt);
-    if(rt===5&&rd)showDayDetail(rd);
-  }
 }
-
 function tab(n){
   curTab=n;
   if(ls.getItem('rbDirty')!=='1')syncCloud(0);
@@ -1641,7 +1632,6 @@ function saveSlipPdf(){
     f.contentWindow.focus();f.contentWindow.print();
   },200);
 }
-
 function renderDaily(){
   let y=dYrSel.value,m=dMoSel.value;
   let dm=new Map(),tw=0,tt=0;dailyDetail.innerHTML="";
@@ -1662,7 +1652,7 @@ function renderDaily(){
     `<p style="font-size:14px;color:#555;margin:6px 0">`
     +`* แตะที่วันที่เพื่อดูรายชื่อคนงานที่มาขาย</p>`
     +`<table><tr><th>วันที่ขาย</th><th>คนงาน</th>`
-    +`<th>น้ำหนักรวม (กก.)</th><th>ยอดขายก่อนหัก</th></tr>`
+    +`<th>น้ำหนักรวม (กก.)</th><th>ยอดขาย (บ.)</th></tr>`
     +days.map(r=>`<tr class="click-row" `
       +`onclick="showDayDetail('${r.d}')">`
       +`<td style="text-align:center;color:#1565c0;`
@@ -1681,7 +1671,6 @@ function renderDaily(){
     `<p style="color:#666;text-align:center;`
     +`margin-top:15px">ไม่มีประวัติการขาย</p>`;
 }
-
 function showDayDetail(dateStr){
   let W=getW(),list=[];
   getH().forEach((x,idx)=>{
