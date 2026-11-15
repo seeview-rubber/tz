@@ -264,25 +264,24 @@ th{background:#e8f5e9;text-align:center}
     padding:0!important;box-shadow:none!important;
     border-radius:0!important;background:#fff!important
   }
-  .slip-page{
-    width:210mm;height:297mm;padding:0;
+    .slip-page{
+    width:210mm;height:297mm;
+    padding:7mm 0 0 0;
     display:flex!important;align-items:center;
     justify-content:center;page-break-after:always;
     break-after:page;overflow:hidden;
     box-sizing:border-box
   }
-  .slip-page:last-child{
-    page-break-after:auto;break-after:auto
-  }
   .slip-pair{
     display:grid!important;
     grid-template-columns:1fr 1fr!important;
-    gap:16mm!important;width:277mm!important;
+    gap:16mm!important;width:270mm!important;
     height:190mm!important;flex-shrink:0;
     margin:0!important;transform:rotate(90deg);
     transform-origin:center center;
     position:relative
   }
+
   .slip-pair::after{
     content:"";position:absolute;
     top:-5mm;bottom:-5mm;left:50%;
@@ -2017,6 +2016,7 @@ function delLog(idx,fromTab,dateStr){
   }else renderPerson();
   alert("ลบรายการเรียบร้อยแล้วครับ");
 }
+
 function fallbackOfflinePrint(){
   $('printFrame')?.remove();
   let f=document.createElement('iframe');
@@ -2037,8 +2037,8 @@ function fallbackOfflinePrint(){
     +`@media print{`
     +`html,body{width:210mm;margin:0!important;`
     +`padding:0!important;background:#fff!important}`
-    +`.slip-page{width:210mm;height:297mm;`
-    +`padding:0;display:flex!important;`
+    +`.slip-page{width:210mm;height:290mm;`
+    +`padding:7mm 0 0 0;display:flex!important;`
     +`align-items:center;justify-content:center;`
     +`page-break-after:always;break-after:page;`
     +`overflow:hidden;box-sizing:border-box}`
@@ -2053,6 +2053,7 @@ function fallbackOfflinePrint(){
     f.contentWindow.print();
   },250);
 }
+
 
 async function saveSlipPdf(){
   let el=$('slipPreview');
