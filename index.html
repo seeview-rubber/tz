@@ -2094,11 +2094,16 @@ function renderSlipPreview(){
 async function toggleAdminPanel(){
   if(!$('adminPanel').classList.contains('hide'))
     return closeAdminPanel();
+    
   let pwd = prompt("🔐 ใส่รหัสผ่านแอดมิน (Admin PIN):");
   if(pwd === null) return;
+  
+  // หน่วงเวลา 50ms ให้คีย์บอร์ดมือถือปิดลงก่อน เพื่อไม่ให้หน้าจอกระตุก
+  await new Promise(r => setTimeout(r, 50));
+  
   if(await hashPin(pwd) === ADMIN_HASH){
     renderPlotSelector();
-    renderActLogs(); // แสดงข้อมูลที่มีในเครื่องทันที ไม่ต้องรอเน็ต
+    renderActLogs(); // ใช้ข้อมูลล่าสุดที่ซิงค์สดมารอไว้แล้ว
     renderDeviceList();
     $('curPinDisplay').innerText = "🔒 เข้ารหัสปลอดภัยแล้ว";
     $('curAdminPinDisplay').innerText = "🔒 เข้ารหัสปลอดภัยแล้ว";
@@ -2106,16 +2111,11 @@ async function toggleAdminPanel(){
     $('newAdminPinInp').value = "";
     $('adminPanel').classList.remove('hide');
     $('btnAdminToggle').classList.add('hide');
-    
-    // ดึงข้อมูลอัปเดตล่าสุดจากออนไลน์ตามมาทีหลังแบบเงียบๆ
-    syncCloud(0).then(() => {
-      renderActLogs();
-      renderDeviceList();
-    });
   } else {
     alert("❌ รหัสผ่านไม่ถูกต้องครับ");
   }
 }
+
 
 function closeAdminPanel(){
   $('adminPanel')
