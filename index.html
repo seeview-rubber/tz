@@ -577,11 +577,16 @@ function renderActLogs(){
     `<p style="color:#78909c;text-align:center;`
     +`margin:10px 0">ยังไม่มีประวัติการแก้ไข</p>`;
 }
+
 function clearActLogs(){
   if(!confirm("⚠️ ยืนยันการล้างประวัติการแก้ไข?"))return;
-  ACT_LOGS=[];ls.setItem('rbActLogs','[]');
-  renderActLogs();saveAllData();
+  ACT_LOGS=[];
+  ls.setItem('rbActLogs','[]');
+  ls.setItem('rbClearLogs','1'); // เพิ่มบรรทัดนี้
+  renderActLogs();
+  saveAllData();
 }
+
 async function refreshActLogs(){
   if(!$('actLogBox'))return;
   $('actLogBox').innerHTML=
@@ -895,7 +900,8 @@ async function applyCloudData(d){
       renderDeviceList();
     }
   }
-  if(Array.isArray(d.actLogs)){
+    // ค้นหาส่วนนี้ใน applyCloudData(d) แล้วเพิ่มเงื่อนไข && ls.getItem('rbClearLogs')!=='1'
+  if(Array.isArray(d.actLogs) && ls.getItem('rbClearLogs')!=='1'){
     let newLogStr=JSON.stringify(d.actLogs);
     if(newLogStr!==JSON.stringify(ACT_LOGS)){
       ACT_LOGS=d.actLogs;
@@ -903,6 +909,7 @@ async function applyCloudData(d){
       renderActLogs();
     }
   }
+
   if(Array.isArray(d.plots)&&d.plots.length){
     let nextPlots=normPlots(d.plots);
     if(JSON.stringify(nextPlots)
@@ -980,7 +987,8 @@ async function syncCloud(push){
           pendingVer=oldD.appVer;
         if(oldD?.devices)
           DEVICES={...oldD.devices,...DEVICES};
-        if(Array.isArray(oldD?.actLogs)){
+                // ค้นหาส่วนนี้ใน syncCloud(push) แล้วแก้ตามนี้ครับ
+        if(Array.isArray(oldD?.actLogs) && ls.getItem('rbClearLogs')!=='1'){
           let seen=new Set(
             ACT_LOGS.map(x=>x.t+x.m));
           oldD.actLogs.forEach(x=>{
@@ -992,6 +1000,7 @@ async function syncCloud(push){
           ls.setItem('rbActLogs',
             JSON.stringify(ACT_LOGS));
         }
+
         if(dirty&&Array.isArray(oldD?.plots)
           &&oldD.plots.length){
           mergedCnt=mergeCloudPlots(oldD.plots);
@@ -1019,9 +1028,11 @@ async function syncCloud(push){
           plots:PLOTS,W:curP.W,H:curP.H
         })
       });
-      if(!res.ok)throw 0;
+            if(!res.ok)throw 0;
       ls.removeItem('rbDirty');
+      ls.removeItem('rbClearLogs'); // เพิ่มบรรทัดนี้
       if(mergedCnt>0)refreshCurrentView();
+
     }else{
       let res=await fetch(FB_URL);
       if(!res.ok)throw 0;
