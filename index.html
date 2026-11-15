@@ -340,7 +340,7 @@ th{background:#e8f5e9;text-align:center}
             onclick="changeAppPin()">💾 บันทึกรหัส</button>
         </div>
         <div style="font-size:12px;color:#546e7a;margin-top:6px">
-          * รหัสผ่านปัจจุบัน: <b id="curPinDisplay"></b>
+          * สถานะรหัสผ่าน: <b id="curPinDisplay"></b>
           (ซิงค์อัตโนมัติทุกเครื่อง)
         </div>
       </div>
@@ -356,7 +356,7 @@ th{background:#e8f5e9;text-align:center}
             onclick="changeAdminPin()">💾 บันทึกรหัส</button>
         </div>
         <div style="font-size:12px;color:#546e7a;margin-top:6px">
-          * รหัสแอดมินปัจจุบัน: <b id="curAdminPinDisplay"></b>
+          * สถานะรหัสแอดมิน: <b id="curAdminPinDisplay"></b>
           (ซิงค์อัตโนมัติทุกเครื่อง)
         </div>
       </div>
@@ -446,8 +446,12 @@ const ls=localStorage;
 const FB_URL="https://seeview-rubber-default-rtdb"
   +".asia-southeast1.firebasedatabase.app"
   +"/rubberData.json";
-let APP_PIN=ls.getItem('rbCustomPin')||"1234";
-let ADMIN_PIN=ls.getItem('rbAdminPin')||"0955511956";
+
+const DEF_APP_HASH="03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4";
+const DEF_ADM_HASH="27a27820be4e058b0156a6f7f83f6236a6042243683f894f6322b3e3009a6443";
+
+let APP_HASH=ls.getItem('rbAppHash')||DEF_APP_HASH;
+let ADMIN_HASH=ls.getItem('rbAdmHash')||DEF_ADM_HASH;
 let ACT_LOGS=JSON.parse(ls.getItem('rbActLogs')||'[]');
 let DEVICES=JSON.parse(ls.getItem('rbDevices')||'{}');
 let DEV_ID=ls.getItem('rbDevId');
@@ -457,6 +461,20 @@ if(!DEV_ID){
 }
 const normPin=s=>String(s||"").trim()
   .replace(/[๐-๙]/g,c=>"๐๑๒๓๔๕๖๗๘๙".indexOf(c));
+const isSha256=s=>/^[a-f0-9]{64}$/i.test(String(s||""));
+
+async function hashPin(pin){
+  let clean=normPin(pin);
+  if(isSha256(clean))return clean.toLowerCase();
+  if(!crypto||!crypto.subtle){
+    let h=0;
+    for(let i=0;i<clean.length;i++)h=((h<<5)-h)+clean.charCodeAt(i)|0;
+    return 'fallback_'+h;
+  }
+  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(clean));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
 const stripNum=n=>String(n||"")
   .replace(/^\d+[\.\)\-\s]+/,'').trim();
 const M=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.",
@@ -471,7 +489,7 @@ function getDeviceType(){
   if(/iPad/i.test(u))return"📱 iPad";
   if(/Android/i.test(u)){
     let m=u.match(/Android\s[\d.]+;\s([^;)]+)/);
-    let model=m?m[1].replace(/Build\/.*/,'').trim():"";
+    let model=m?m.replace(/Build\/.*/,'').trim():"";
     return"📱 Android"+(model?` (${model})`:"");
   }
   if(/Windows/i.test(u))return"💻 Windows";
@@ -569,9 +587,13 @@ function getThaiToday(){
   return d.toISOString().slice(0,10);
 }
 async function checkPin(){
-  if(normPin(pinInp.value)===APP_PIN){
+  let h=await hashPin(pinInp.value);
+  if(h===APP_HASH){
     ensureDeviceName();
-    ls.setItem('rbAuth',APP_PIN);
+    ls.setItem('rbAuthHash',APP_HASH);
+    ls.removeItem('rbAuth');
+    ls.removeItem('rbCustomPin');
+    ls.removeItem('rbAdminPin');
     pinErr.classList.add('hide');
     loginBox.classList.add('hide');
     appMain.classList.remove('hide');
@@ -584,7 +606,9 @@ async function checkPin(){
   }
 }
 function lockApp(){
-  ls.removeItem('rbAuth');closeAdminPanel();
+  ls.removeItem('rbAuthHash');
+  ls.removeItem('rbAuth');
+  closeAdminPanel();
   pinInp.value="";appMain.classList.add('hide');
   loginBox.classList.remove('hide');
 }
@@ -765,7 +789,7 @@ async function syncCloud(push){
         method:'PUT',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({
-          appPin:APP_PIN,adminPin:ADMIN_PIN,
+          appHash:APP_HASH,adminHash:ADMIN_HASH,
           actLogs:ACT_LOGS,devices:DEVICES,
           plots:PLOTS,W:curP.W,H:curP.H
         })
@@ -784,22 +808,23 @@ async function syncCloud(push){
       let res=await fetch(FB_URL);
       if(!res.ok)throw 0;
       let d=await res.json();
-      if(d&&d.appPin){
-        let cp=normPin(d.appPin);
-        if(cp&&cp!==APP_PIN){
-          let auth=ls.getItem('rbAuth')===APP_PIN;
-          APP_PIN=cp;
-          ls.setItem('rbCustomPin',APP_PIN);
-          if(auth)ls.setItem('rbAuth',APP_PIN);
-          curPinDisplay.innerText=APP_PIN;
+      let needPushHash=false;
+      if(d&&(d.appHash||d.appPin)){
+        let ch=d.appHash?String(d.appHash).toLowerCase():await hashPin(d.appPin);
+        if(!d.appHash&&d.appPin)needPushHash=true;
+        if(ch&&ch!==APP_HASH){
+          let auth=ls.getItem('rbAuthHash')===APP_HASH;
+          APP_HASH=ch;
+          ls.setItem('rbAppHash',APP_HASH);
+          if(auth)ls.setItem('rbAuthHash',APP_HASH);
         }
       }
-      if(d&&d.adminPin){
-        let cap=normPin(d.adminPin);
-        if(cap&&cap!==ADMIN_PIN){
-          ADMIN_PIN=cap;
-          ls.setItem('rbAdminPin',ADMIN_PIN);
-          curAdminPinDisplay.innerText=ADMIN_PIN;
+      if(d&&(d.adminHash||d.adminPin)){
+        let cah=d.adminHash?String(d.adminHash).toLowerCase():await hashPin(d.adminPin);
+        if(!d.adminHash&&d.adminPin)needPushHash=true;
+        if(cah&&cah!==ADMIN_HASH){
+          ADMIN_HASH=cah;
+          ls.setItem('rbAdmHash',ADMIN_HASH);
         }
       }
       if(d&&d.devices&&typeof d.devices==='object'){
@@ -835,8 +860,9 @@ async function syncCloud(push){
         }]);
         curPlotId='plot_1';
         ls.setItem('rbPlotsV1',JSON.stringify(PLOTS));
-        init();await syncCloud(1);
-      }else if(PLOTS.length)await syncCloud(1);
+        init();needPushHash=true;
+      }else if(PLOTS.length)needPushHash=true;
+      if(needPushHash)await syncCloud(1);
     }
     let tm=new Date().toLocaleTimeString('th-TH');
     let msg=mergedCnt>0?
@@ -855,19 +881,23 @@ async function syncCloud(push){
 }
 
 window.addEventListener('online',()=>{
-  if(ls.getItem('rbAuth')===APP_PIN)syncCloud(0);
+  if(ls.getItem('rbAuthHash')===APP_HASH)syncCloud(0);
 });
 document.addEventListener('visibilitychange',()=>{
   if(!document.hidden&&
-    ls.getItem('rbAuth')===APP_PIN){
+    ls.getItem('rbAuthHash')===APP_HASH){
     if(editIdx<0)dt.value=getThaiToday();
     syncCloud(0);
   }
 });
 setInterval(()=>{
-  if(ls.getItem('rbAuth')===APP_PIN&&
-    ls.getItem('rbDirty')==='1')syncCloud(1);
-},15000);
+  if(ls.getItem('rbAuthHash')!==APP_HASH)return;
+  if(ls.getItem('rbDirty')==='1'){
+    syncCloud(1);
+  }else if(editIdx<0&&document.activeElement?.tagName!=='INPUT'){
+    syncCloud(0);
+  }
+},10000);
 
 function markEditRid(id){
   let a=JSON.parse(ls.getItem('rbEditRids')||'[]');
@@ -1020,6 +1050,7 @@ function cancelEdit(){
 }
 function tab(n){
   curTab=n;
+  if(ls.getItem('rbDirty')!=='1')syncCloud(0);
   [p1,p2,p3,p4,p5,p6].forEach((e,i)=>
     e.classList.toggle('hide',i+1!=n));
   [m1,m2,m3,m4,m5,m6].forEach((e,i)=>
@@ -1510,17 +1541,18 @@ function renderSlipPreview(){
     `<p style="color:#c62828;text-align:center">
       กรุณาติ๊กเลือกอย่างน้อย 1 รายการเพื่อพิมพ์สลิป</p>`;
 }
-function toggleAdminPanel(){
+async function toggleAdminPanel(){
   if(!adminPanel.classList.contains('hide'))
     return closeAdminPanel();
   let pwd=prompt("🔐 กรุณาใส่รหัสผ่านแอดมิน (Admin PIN):");
   if(pwd===null)return;
-  if(normPin(pwd)===ADMIN_PIN){
+  let h=await hashPin(pwd);
+  if(h===ADMIN_HASH){
     renderPlotSelector();
     refreshActLogs();
     renderDeviceList();
-    curPinDisplay.innerText=APP_PIN;
-    curAdminPinDisplay.innerText=ADMIN_PIN;
+    curPinDisplay.innerText="🔒 เข้ารหัสปลอดภัยแล้ว";
+    curAdminPinDisplay.innerText="🔒 เข้ารหัสปลอดภัยแล้ว";
     newPinInp.value="";
     newAdminPinInp.value="";
     adminPanel.classList.remove('hide');
@@ -1532,34 +1564,41 @@ function closeAdminPanel(){
   btnAdminToggle.classList.remove('hide');
   bkBox.value="";
 }
-function changeAppPin(){
+async function changeAppPin(){
   let np=normPin(newPinInp.value);
   if(!/^\d{4,}$/.test(np))
     return alert("กรุณากรอกรหัสผ่านตัวเลขอย่างน้อย 4 หลักครับ");
-  if(np===APP_PIN)
+  let nh=await hashPin(np);
+  if(nh===APP_HASH)
     return alert("รหัสผ่านใหม่ซ้ำกับรหัสผ่านปัจจุบันครับ");
   if(!confirm(`ยืนยันการเปลี่ยนรหัสผ่านบัญชีเป็น "${np}"?`))
     return;
-  APP_PIN=np;ls.setItem('rbCustomPin',APP_PIN);
-  ls.setItem('rbAuth',APP_PIN);
-  curPinDisplay.innerText=APP_PIN;newPinInp.value="";
+  APP_HASH=nh;ls.setItem('rbAppHash',APP_HASH);
+  ls.setItem('rbAuthHash',APP_HASH);
+  ls.removeItem('rbCustomPin');
+  ls.removeItem('rbAuth');
+  curPinDisplay.innerText="🔒 เข้ารหัสปลอดภัยแล้ว";
+  newPinInp.value="";
   addActLog(`🔑 เปลี่ยนรหัสผ่านเข้าใช้งาน (App PIN)`);
   saveAllData();
-  alert(`เปลี่ยนรหัสผ่านเป็น "${APP_PIN}" เรียบร้อยแล้ว!`);
+  alert(`เปลี่ยนรหัสผ่านเป็น "${np}" เรียบร้อยแล้ว!`);
 }
-function changeAdminPin(){
+async function changeAdminPin(){
   let nap=normPin(newAdminPinInp.value);
   if(!/^\d{4,}$/.test(nap))
     return alert("กรุณากรอกรหัสผ่านแอดมินตัวเลขอย่างน้อย 4 หลักครับ");
-  if(nap===ADMIN_PIN)
+  let nah=await hashPin(nap);
+  if(nah===ADMIN_HASH)
     return alert("รหัสผ่านแอดมินใหม่ซ้ำกับรหัสผ่านปัจจุบันครับ");
   if(!confirm(`ยืนยันการเปลี่ยนรหัสผ่านแอดมินเป็น "${nap}"?`))
     return;
-  ADMIN_PIN=nap;ls.setItem('rbAdminPin',ADMIN_PIN);
-  curAdminPinDisplay.innerText=ADMIN_PIN;newAdminPinInp.value="";
+  ADMIN_HASH=nah;ls.setItem('rbAdmHash',ADMIN_HASH);
+  ls.removeItem('rbAdminPin');
+  curAdminPinDisplay.innerText="🔒 เข้ารหัสปลอดภัยแล้ว";
+  newAdminPinInp.value="";
   addActLog(`🛡️ เปลี่ยนรหัสผ่านแอดมิน (Admin PIN)`);
   saveAllData();
-  alert(`เปลี่ยนรหัสผ่านแอดมินเป็น "${ADMIN_PIN}" เรียบร้อยแล้ว!`);
+  alert(`เปลี่ยนรหัสผ่านแอดมินเป็น "${nap}" เรียบร้อยแล้ว!`);
 }
 function renameCurPlot(){
   let nm=String(renamePlotInp.value||"").trim();
@@ -1636,7 +1675,7 @@ function factoryResetPlot(){
 function doBackup(){
   let c=getCurPlot();
   let s=JSON.stringify({
-    appPin:APP_PIN,adminPin:ADMIN_PIN,
+    appHash:APP_HASH,adminHash:ADMIN_HASH,
     actLogs:ACT_LOGS,devices:DEVICES,
     plots:PLOTS,W:c.W,H:c.H
   });
@@ -1649,14 +1688,17 @@ async function doRestore(){
     let d=JSON.parse(bkBox.value);
     if(!confirm("⚠️ การกู้คืนจะเขียนทับข้อมูลทั้งหมด ยืนยัน?"))
       return;
-    if(d.appPin&&/^\d{4,}$/.test(normPin(d.appPin))){
-      APP_PIN=normPin(d.appPin);
-      ls.setItem('rbCustomPin',APP_PIN);
-      ls.setItem('rbAuth',APP_PIN);
+    if(d.appHash||d.appPin){
+      APP_HASH=d.appHash?String(d.appHash).toLowerCase():await hashPin(d.appPin);
+      ls.setItem('rbAppHash',APP_HASH);
+      ls.setItem('rbAuthHash',APP_HASH);
+      ls.removeItem('rbCustomPin');
+      ls.removeItem('rbAuth');
     }
-    if(d.adminPin&&/^\d{4,}$/.test(normPin(d.adminPin))){
-      ADMIN_PIN=normPin(d.adminPin);
-      ls.setItem('rbAdminPin',ADMIN_PIN);
+    if(d.adminHash||d.adminPin){
+      ADMIN_HASH=d.adminHash?String(d.adminHash).toLowerCase():await hashPin(d.adminPin);
+      ls.setItem('rbAdmHash',ADMIN_HASH);
+      ls.removeItem('rbAdminPin');
     }
     if(d.devices&&typeof d.devices==='object'){
       DEVICES=d.devices;
@@ -1688,7 +1730,7 @@ async function doRestore(){
       method:'PUT',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        appPin:APP_PIN,adminPin:ADMIN_PIN,
+        appHash:APP_HASH,adminHash:ADMIN_HASH,
         actLogs:ACT_LOGS,devices:DEVICES,
         plots:PLOTS,W:curP.W,H:curP.H
       })
@@ -1699,7 +1741,7 @@ async function doRestore(){
   }catch(e){alert("รหัสข้อมูลสำรองไม่ถูกต้องครับ");}
 }
 
-if(ls.getItem('rbAuth')===APP_PIN){
+if(ls.getItem('rbAuthHash')===APP_HASH){
   ensureDeviceName();
   loginBox.classList.add('hide');
   appMain.classList.remove('hide');
