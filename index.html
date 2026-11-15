@@ -2090,7 +2090,6 @@ function renderSlipPreview(){
     +`กรุณาติ๊กเลือกอย่างน้อย `
     +`1 รายการเพื่อพิมพ์</p>`;
 }
-
 async function toggleAdminPanel(){
   if(!$('adminPanel')
     .classList.contains('hide'))
@@ -2102,7 +2101,7 @@ async function toggleAdminPanel(){
   if(await hashPin(pwd)
     ===ADMIN_HASH){
     renderPlotSelector();
-    renderActLogs();
+    refreshActLogs();
     renderDeviceList();
     $('curPinDisplay')
       .innerText=
@@ -2119,7 +2118,6 @@ async function toggleAdminPanel(){
   }else alert(
     "❌ รหัสผ่านไม่ถูกต้องครับ");
 }
-
 function closeAdminPanel(){
   $('adminPanel')
     .classList.add('hide');
