@@ -471,7 +471,7 @@ function getDeviceType(){
   if(/iPad/i.test(u))return"📱 iPad";
   if(/Android/i.test(u)){
     let m=u.match(/Android\s[\d.]+;\s([^;)]+)/);
-    let model=m?m.replace(/Build\/.*/,'').trim():"";
+    let model=m?m[1].replace(/Build\/.*/,'').trim():"";
     return"📱 Android"+(model?` (${model})`:"");
   }
   if(/Windows/i.test(u))return"💻 Windows";
@@ -644,9 +644,15 @@ function mergeCloudPlots(cloudArr){
   let cPlots=normPlots(cloudArr),addedCnt=0;
   let delRids=new Set(JSON.parse(ls.getItem('rbDelRids')||'[]'));
   let editRids=new Set(JSON.parse(ls.getItem('rbEditRids')||'[]'));
+  let newPids=new Set(JSON.parse(ls.getItem('rbNewPids')||'[]'));
+  let finalPlots=[];
+
   cPlots.forEach(cp=>{
     let lp=PLOTS.find(p=>p.id===cp.id);
-    if(!lp){PLOTS.push(cp);return;}
+    if(!lp){
+      finalPlots.push(cp);
+      return;
+    }
     let cMap=new Map(cp.H.map(x=>[x.rid,x]));
     let lMap=new Map(lp.H.map(x=>[x.rid,x]));
     let mergedH=[];
@@ -666,14 +672,36 @@ function mergeCloudPlots(cloudArr){
         else cp.W.push({id:lh.wid,n:lh.wn||"คนงาน",s:+lh.s||0});
       }
     });
-    lp.H=mergedH;
-    lp.W=cp.W.map(cw=>{
+    cp.H=mergedH;
+    cp.W=cp.W.map(cw=>{
       let lw=lp.W.find(w=>w.id===cw.id);
       return lw&&editRids.has('w_'+cw.id)?lw:cw;
     });
+    finalPlots.push(cp);
   });
+
+  PLOTS.forEach(lp=>{
+    if(newPids.has(lp.id)&&!cPlots.some(cp=>cp.id===lp.id)){
+      finalPlots.push(lp);
+    }
+  });
+
+  if(!finalPlots.length){
+    finalPlots=normPlots([{
+      id:'plot_1',name:'แปลงที่ 1',
+      W:[{id:Date.now(),n:"คนงาน 1",s:0}],H:[]
+    }]);
+  }
+
+  PLOTS=finalPlots;
+  if(!PLOTS.some(p=>p.id===curPlotId)){
+    curPlotId=PLOTS.at(0).id;
+    ls.setItem('rbCurPlotId',curPlotId);
+  }
+
   ls.removeItem('rbDelRids');
   ls.removeItem('rbEditRids');
+  ls.removeItem('rbNewPids');
   ls.setItem('rbPlotsV1',JSON.stringify(PLOTS));
   return addedCnt;
 }
@@ -1557,6 +1585,9 @@ function addNewPlot(){
     id:'plot_'+Date.now(),name:nm,
     W:[{id:Date.now()+1,n:"คนงาน 1",s:0}],H:[]
   };
+  let newPids=JSON.parse(ls.getItem('rbNewPids')||'[]');
+  newPids.push(np.id);
+  ls.setItem('rbNewPids',JSON.stringify(newPids));
   PLOTS.push(np);curPlotId=np.id;
   addActLog(`➕ เพิ่มแปลงใหม่ "${nm}"`);
   saveAllData();switchPlot(curPlotId);
@@ -1648,6 +1679,7 @@ async function doRestore(){
     ls.removeItem('rbDirty');
     ls.removeItem('rbDelRids');
     ls.removeItem('rbEditRids');
+    ls.removeItem('rbNewPids');
     ls.setItem('rbPlotsV1',JSON.stringify(PLOTS));
     ls.setItem('rbCurPlotId',curPlotId);
     addActLog(`📥 กู้คืนข้อมูลทั้งระบบ (Restore)`);
