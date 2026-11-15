@@ -2090,33 +2090,34 @@ function renderSlipPreview(){
     +`กรุณาติ๊กเลือกอย่างน้อย `
     +`1 รายการเพื่อพิมพ์</p>`;
 }
-
 async function toggleAdminPanel(){
-  if(!$('adminPanel').classList.contains('hide'))
+  if(!$('adminPanel')
+    .classList.contains('hide'))
     return closeAdminPanel();
-    
-  let pwd = prompt("🔐 ใส่รหัสผ่านแอดมิน (Admin PIN):");
-  if(pwd === null) return;
-  
-  // หน่วงเวลา 50ms ให้คีย์บอร์ดมือถือปิดลงก่อน เพื่อไม่ให้หน้าจอกระตุก
-  await new Promise(r => setTimeout(r, 50));
-  
-  if(await hashPin(pwd) === ADMIN_HASH){
+  let pwd=prompt(
+    "🔐 ใส่รหัสผ่านแอดมิน "
+    +"(Admin PIN):");
+  if(pwd===null)return;
+  if(await hashPin(pwd)
+    ===ADMIN_HASH){
     renderPlotSelector();
-    renderActLogs(); // ใช้ข้อมูลล่าสุดที่ซิงค์สดมารอไว้แล้ว
+    refreshActLogs();
     renderDeviceList();
-    $('curPinDisplay').innerText = "🔒 เข้ารหัสปลอดภัยแล้ว";
-    $('curAdminPinDisplay').innerText = "🔒 เข้ารหัสปลอดภัยแล้ว";
-    $('newPinInp').value = "";
-    $('newAdminPinInp').value = "";
-    $('adminPanel').classList.remove('hide');
-    $('btnAdminToggle').classList.add('hide');
-  } else {
-    alert("❌ รหัสผ่านไม่ถูกต้องครับ");
-  }
+    $('curPinDisplay')
+      .innerText=
+      "🔒 เข้ารหัสปลอดภัยแล้ว";
+    $('curAdminPinDisplay')
+      .innerText=
+      "🔒 เข้ารหัสปลอดภัยแล้ว";
+    $('newPinInp').value="";
+    $('newAdminPinInp').value="";
+    $('adminPanel')
+      .classList.remove('hide');
+    $('btnAdminToggle')
+      .classList.add('hide');
+  }else alert(
+    "❌ รหัสผ่านไม่ถูกต้องครับ");
 }
-
-
 function closeAdminPanel(){
   $('adminPanel')
     .classList.add('hide');
