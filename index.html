@@ -9,6 +9,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>บัญชีขายขี้ยาง</title>
+<script src="https://cloudflare.com" defer></script>
 <style>
 *{box-sizing:border-box;font-family:sans-serif}
 html,body{
@@ -144,7 +145,7 @@ th{background:#e8f5e9;text-align:center}
 .slip-pair{
   display:grid;
   grid-template-columns:minmax(0,1fr) minmax(0,1fr);
-  gap:14px;margin-bottom:18px
+  gap:16px;margin-bottom:18px;position:relative
 }
 .slip-portrait{
   display:block;margin-bottom:18px;
@@ -264,7 +265,7 @@ th{background:#e8f5e9;text-align:center}
     border-radius:0!important;background:#fff!important
   }
   .slip-page{
-    width:210mm;height:274mm;padding:6mm;
+    width:210mm;height:297mm;padding:0;
     display:flex!important;align-items:center;
     justify-content:center;page-break-after:always;
     break-after:page;overflow:hidden;
@@ -276,13 +277,21 @@ th{background:#e8f5e9;text-align:center}
   .slip-pair{
     display:grid!important;
     grid-template-columns:1fr 1fr!important;
-    gap:10mm;width:260mm;height:186mm;flex-shrink:0;
-    margin:0;transform:rotate(90deg);
-    transform-origin:center center
+    gap:16mm!important;width:277mm!important;
+    height:190mm!important;flex-shrink:0;
+    margin:0!important;transform:rotate(90deg);
+    transform-origin:center center;
+    position:relative
+  }
+  .slip-pair::after{
+    content:"";position:absolute;
+    top:-5mm;bottom:-5mm;left:50%;
+    border-left:1.5px dashed #888;
+    transform:translateX(-50%)
   }
   .slip-portrait{
-    display:block!important;width:194mm;
-    height:260mm;margin:0;overflow:visible
+    display:block!important;width:190mm;
+    height:277mm;margin:0;overflow:visible
   }
   .slip-portrait .slip-hdr{font-size:22px;padding:12px}
   .slip-portrait .slip-sub{font-size:16px;margin-bottom:10px}
@@ -401,7 +410,6 @@ th{background:#e8f5e9;text-align:center}
       class="br hide" onclick="cancelEdit()">
       ❌ ยกเลิกการแก้ไข</button>
   </div>
-
   <div id="p2" class="box hide no-print">
     <h2>💰 จัดการรายชื่อและยอดสะสม</h2>
     <div id="wList"></div>
@@ -570,6 +578,7 @@ th{background:#e8f5e9;text-align:center}
       </div>
     </div>
   </div>
+
   <div id="p3" class="box hide no-print"
     style="overflow-x:auto">
     <h2>📊 สรุปยอดขายรายปี</h2>
@@ -854,6 +863,7 @@ function getThaiToday(){
   let d=new Date(Date.now()+7*3600000);
   return d.toISOString().slice(0,10);
 }
+
 let pinTimer=null;
 function updatePinLockUI(){
   let lockUntil=+(ls.getItem('rbPinLockUntil')||0);
@@ -918,7 +928,6 @@ async function adminUnlockPin(){
     alert("❌ รหัสผ่านแอดมินไม่ถูกต้องครับ");
   }
 }
-
 async function checkPin(){
   if(updatePinLockUI())return;
   let el=$('pinInp'),err=$('pinErr'),btn=$('btnLogin');
@@ -1858,7 +1867,8 @@ function renderYear(){
     +`<td>${tp.toLocaleString()}</td>`
     +`<td>${(tt-ts-tp).toLocaleString()}`
     +`</td></tr></table>`;
-} let showPersonLogs=false;
+}
+let showPersonLogs=false;
 function togglePersonLogs(){
   showPersonLogs=!showPersonLogs;
   $('pLogBox')?.classList.toggle(
@@ -1977,7 +1987,6 @@ function renderPerson(){
       +`ไม่มีประวัติในปีที่เลือก</p>`)
     +`</div>`;
 }
-
 function delLog(idx,fromTab,dateStr){
   let H=getH(),item=H[idx];
   if(!item||!confirm(
@@ -2008,58 +2017,122 @@ function delLog(idx,fromTab,dateStr){
   }else renderPerson();
   alert("ลบรายการเรียบร้อยแล้วครับ");
 }
-function saveSlipPdf(){
-  if(!$('slipPreview')
-    .querySelector('.slip-page'))
-    return alert(
-      "กรุณาติ๊กเลือกอย่างน้อย"
-      +" 1 รายการครับ");
+function fallbackOfflinePrint(){
   $('printFrame')?.remove();
-  let f=document.createElement(
-    'iframe');
+  let f=document.createElement('iframe');
   f.id='printFrame';
   f.style.cssText=
-    'position:fixed;'
-    +'right:0;bottom:0;'
+    'position:fixed;right:0;bottom:0;'
     +'width:0;height:0;border:0;';
   document.body.appendChild(f);
-  let doc=
-    f.contentWindow.document;
+  let doc=f.contentWindow.document;
   doc.open();
-  let st=document.querySelector(
-    'style').innerHTML;
+  let st=document.querySelector('style').innerHTML;
   doc.write(`<!DOCTYPE html>`
     +`<html lang="th"><head>`
     +`<meta charset="UTF-8">`
+    +`<title> </title>`
     +`<style>${st}`
-    +`@page{size:A4 portrait;`
-    +`margin:0}`
-    +`@media print{html,body{`
-    +`width:210mm;`
-    +`margin:0!important;`
-    +`padding:0!important;`
-    +`background:#fff!important}`
-    +`.slip-page{width:210mm;`
-    +`height:274mm;padding:6mm;`
-    +`display:flex!important;`
-    +`align-items:center;`
-    +`justify-content:center;`
-    +`page-break-after:always;`
-    +`break-after:page;`
-    +`overflow:hidden;`
-    +`box-sizing:border-box}`
+    +`@page{size:A4 portrait;margin:0!important}`
+    +`@media print{`
+    +`html,body{width:210mm;margin:0!important;`
+    +`padding:0!important;background:#fff!important}`
+    +`.slip-page{width:210mm;height:297mm;`
+    +`padding:0;display:flex!important;`
+    +`align-items:center;justify-content:center;`
+    +`page-break-after:always;break-after:page;`
+    +`overflow:hidden;box-sizing:border-box}`
     +`.slip-page:last-child{`
-    +`page-break-after:auto;`
-    +`break-after:auto}}`
-    +`</style></head><body>`
+    +`page-break-after:auto;break-after:auto}`
+    +`}</style></head><body>`
     +`${$('slipPreview').innerHTML}`
     +`</body></html>`);
   doc.close();
   setTimeout(()=>{
     f.contentWindow.focus();
     f.contentWindow.print();
-  },200);
+  },250);
 }
+
+async function saveSlipPdf(){
+  let el=$('slipPreview');
+  if(!el.querySelector('.slip-page'))
+    return alert(
+      "กรุณาติ๊กเลือกอย่างน้อย 1 รายการครับ");
+
+  if(!navigator.onLine
+    ||typeof html2pdf==='undefined'){
+    fallbackOfflinePrint();
+    return;
+  }
+
+  let btn=$('btnPdf');
+  let oldTxt=btn.innerText;
+  btn.disabled=true;
+  btn.innerText="⏳ กำลังสร้างไฟล์ PDF...";
+
+  let d=$('prDateSel').value||'slip';
+  let wrap=document.createElement('div');
+  wrap.style.cssText=
+    'width:210mm;background:#fff;margin:0;padding:0;';
+  wrap.innerHTML=el.innerHTML;
+
+  wrap.querySelectorAll('.slip-page')
+    .forEach((p,idx,arr)=>{
+      p.style.cssText=
+        'width:210mm;height:297mm;padding:0;'
+        +'display:flex;align-items:center;'
+        +'justify-content:center;'
+        +'box-sizing:border-box;background:#fff;'
+        +(idx<arr.length-1?
+          'page-break-after:always;':'');
+    });
+  wrap.querySelectorAll('.slip-pair')
+    .forEach(p=>{
+      p.style.cssText=
+        'display:grid;'
+        +'grid-template-columns:1fr 1fr;'
+        +'gap:16mm;width:277mm;height:190mm;'
+        +'flex-shrink:0;margin:0;'
+        +'transform:rotate(90deg);'
+        +'transform-origin:center center;'
+        +'position:relative;';
+      let cut=document.createElement('div');
+      cut.style.cssText=
+        'position:absolute;top:-5mm;'
+        +'bottom:-5mm;left:50%;'
+        +'border-left:1.5px dashed #888;'
+        +'transform:translateX(-50%);';
+      p.appendChild(cut);
+    });
+  wrap.querySelectorAll('.slip-portrait')
+    .forEach(p=>{
+      p.style.cssText=
+        'display:block;width:190mm;'
+        +'height:277mm;margin:0;';
+    });
+
+  document.body.appendChild(wrap);
+  try{
+    await html2pdf().set({
+      margin:0,
+      filename:`สลิปขายยาง_${d}.pdf`,
+      image:{type:'jpeg',quality:0.98},
+      html2canvas:{scale:2,useCORS:true},
+      jsPDF:{
+        unit:'mm',format:'a4',
+        orientation:'portrait'
+      }
+    }).from(wrap).save();
+  }catch(e){
+    fallbackOfflinePrint();
+  }finally{
+    wrap.remove();
+    btn.disabled=false;
+    btn.innerText=oldTxt;
+  }
+}
+
 function renderDaily(){
   let y=$('dYrSel').value;
   let m=$('dMoSel').value;
