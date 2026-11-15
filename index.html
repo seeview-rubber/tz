@@ -533,7 +533,6 @@ th{background:#e8f5e9;text-align:center}
       </div>
     </div>
   </div>
-
   <div id="p3" class="box hide no-print"
     style="overflow-x:auto">
     <h2>📊 สรุปยอดขายรายปี</h2>
@@ -662,7 +661,6 @@ const M=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.",
 const MF=["มกราคม","กุมภาพันธ์","มีนาคม",
   "เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม",
   "สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
-
 function getDeviceType(){
   let u=navigator.userAgent||"";
   if(/iPhone/i.test(u))return"📱 iPhone";
@@ -793,20 +791,20 @@ async function checkPin(){
     appMain.classList.remove('hide');
     init();
     await syncCloud(0);
-    syncCloud(1);
+    if(ls.getItem('rbDirty')==='1')syncCloud(1);
   }else{
     pinErr.classList.remove('hide');
     pinInp.value="";pinInp.focus();
   }
 }
 function lockApp(){
+  if(fbStream){fbStream.close();fbStream=null;}
   ls.removeItem('rbAuthHash');
   ls.removeItem('rbAuth');
   closeAdminPanel();
   pinInp.value="";appMain.classList.add('hide');
   loginBox.classList.remove('hide');
 }
-
 function normPlots(arr){
   return arr.map((p,idx)=>({
     id:p.id||('plot_'+(idx+1)),
@@ -861,7 +859,7 @@ let editIdx=-1,editFromTab=4;
 let curSlipItems=[],curTab=1;
 dt.value=getThaiToday();
 
-let isSyncing=false;
+let isSyncing=false,fbStream=null;
 function mergeCloudPlots(cloudArr){
   let cPlots=normPlots(cloudArr),addedCnt=0;
   let delRids=new Set(JSON.parse(
@@ -949,7 +947,10 @@ function renderPlotSelector(){
 function switchPlot(pid){
   if(editIdx>=0)cancelEdit();
   ls.setItem('rbCurPlotId',curPlotId=pid);
-  renderPlotSelector();init();
+  renderPlotSelector();refreshCurrentView();
+}
+function refreshCurrentView(){
+  init();
   if(curTab==2){delWBox.innerHTML="";renderWList();}
   if(curTab==3){fillYears();renderYear();}
   if(curTab==4){
@@ -958,32 +959,122 @@ function switchPlot(pid){
   if(curTab==5){fillYears();renderDaily();}
   if(curTab==6)initSlipPage();
 }
+async function applyCloudData(d){
+  if(!d)return false;
+  let needPushHash=false,changed=false;
+  if(d.appHash||d.appPin){
+    let ch=d.appHash?
+      String(d.appHash).toLowerCase():
+      await hashPin(d.appPin);
+    if(!d.appHash&&d.appPin)needPushHash=true;
+    if(ch&&ch!==APP_HASH){
+      let auth=ls.getItem('rbAuthHash')===APP_HASH;
+      APP_HASH=ch;
+      ls.setItem('rbAppHash',APP_HASH);
+      if(auth)ls.setItem('rbAuthHash',APP_HASH);
+    }
+  }
+  if(d.adminHash||d.adminPin){
+    let cah=d.adminHash?
+      String(d.adminHash).toLowerCase():
+      await hashPin(d.adminPin);
+    if(!d.adminHash&&d.adminPin)needPushHash=true;
+    if(cah&&cah!==ADMIN_HASH){
+      ADMIN_HASH=cah;
+      ls.setItem('rbAdmHash',ADMIN_HASH);
+    }
+  }
+  if(d.devices&&typeof d.devices==='object'){
+    let newDevStr=JSON.stringify({...DEVICES,...d.devices});
+    if(newDevStr!==JSON.stringify(DEVICES)){
+      DEVICES=JSON.parse(newDevStr);
+      if(DEVICES[DEV_ID]?.name)
+        ls.setItem('rbDevName',DEVICES[DEV_ID].name);
+      ls.setItem('rbDevices',newDevStr);
+      renderDeviceList();
+    }
+  }
+  if(Array.isArray(d.actLogs)){
+    let newLogStr=JSON.stringify(d.actLogs);
+    if(newLogStr!==JSON.stringify(ACT_LOGS)){
+      ACT_LOGS=d.actLogs;
+      ls.setItem('rbActLogs',newLogStr);
+      renderActLogs();
+    }
+  }
+  if(Array.isArray(d.plots)&&d.plots.length){
+    let nextPlots=normPlots(d.plots);
+    if(JSON.stringify(nextPlots)!==JSON.stringify(PLOTS)){
+      PLOTS=nextPlots;
+      if(!PLOTS.some(p=>p.id===curPlotId))
+        curPlotId=PLOTS.at(0).id;
+      ls.setItem('rbPlotsV1',JSON.stringify(PLOTS));
+      changed=true;
+    }
+  }else if(d.W){
+    let nextPlots=normPlots([{
+      id:'plot_1',name:'แปลงที่ 1',
+      W:d.W,H:d.H||[]
+    }]);
+    if(JSON.stringify(nextPlots)!==JSON.stringify(PLOTS)){
+      PLOTS=nextPlots;
+      curPlotId='plot_1';
+      ls.setItem('rbPlotsV1',JSON.stringify(PLOTS));
+      changed=true;
+    }
+    needPushHash=true;
+  }else if(PLOTS.length)needPushHash=true;
 
+  if(changed)refreshCurrentView();
+  return needPushHash;
+}
+function startCloudStream(){
+  if(fbStream)fbStream.close();
+  if(ls.getItem('rbAuthHash')!==APP_HASH)return;
+  fbStream=new EventSource(FB_URL);
+  const onMsg=async e=>{
+    if(ls.getItem('rbDirty')==='1'||editIdx>=0)return;
+    if(curTab==2&&document.activeElement?.tagName==='INPUT')return;
+    try{
+      let pkt=JSON.parse(e.data);
+      if(!pkt||pkt.path!=='/'||!pkt.data)return;
+      let needPush=await applyCloudData(pkt.data);
+      let tm=new Date().toLocaleTimeString('th-TH');
+      syncStatus.innerText=`🟢 ซิงค์สดอัตโนมัติ (${tm})`;
+      syncStatus.style.background="#e8f5e9";
+      syncStatus.style.color="#1b5e20";
+      if(needPush)await syncCloud(1);
+    }catch(err){}
+  };
+  fbStream.addEventListener('put',onMsg);
+  fbStream.addEventListener('patch',onMsg);
+  fbStream.onerror=()=>{
+    syncStatus.innerText="🟡 กำลังเชื่อมต่อซิงค์สดใหม่...";
+    syncStatus.style.background="#fff8e1";
+    syncStatus.style.color="#e65100";
+  };
+}
 async function syncCloud(push){
   if(isSyncing&&!push)return;
   isSyncing=true;
   let dirty=ls.getItem('rbDirty')==='1',mergedCnt=0;
   try{
     if(push||dirty){
-      syncStatus.innerText=
-        "🔄 กำลังซิงค์ข้อมูลขึ้นออนไลน์...";
+      syncStatus.innerText="🔄 กำลังซิงค์ข้อมูลขึ้นออนไลน์...";
       let pre=await fetch(FB_URL);
       if(pre.ok){
         let oldD=await pre.json();
         if(oldD?.devices)
           DEVICES={...oldD.devices,...DEVICES};
         if(Array.isArray(oldD?.actLogs)){
-          let seen=new Set(
-            ACT_LOGS.map(x=>x.t+x.m));
+          let seen=new Set(ACT_LOGS.map(x=>x.t+x.m));
           oldD.actLogs.forEach(x=>{
             if(!seen.has(x.t+x.m))ACT_LOGS.push(x);
           });
           if(ACT_LOGS.length>100)ACT_LOGS.length=100;
-          ls.setItem('rbActLogs',
-            JSON.stringify(ACT_LOGS));
+          ls.setItem('rbActLogs',JSON.stringify(ACT_LOGS));
         }
-        if(dirty&&Array.isArray(oldD?.plots)&&
-          oldD.plots.length){
+        if(dirty&&Array.isArray(oldD?.plots)&&oldD.plots.length){
           mergedCnt=mergeCloudPlots(oldD.plots);
           if(mergedCnt>0)addActLog(
             `🔄 ผสานข้อมูลค้างส่ง (${mergedCnt} รายการ)`
@@ -996,8 +1087,7 @@ async function syncCloud(push){
           name:ls.getItem('rbDevName'),
           type:getDeviceType(),last:Date.now()
         };
-        ls.setItem('rbDevices',
-          JSON.stringify(DEVICES));
+        ls.setItem('rbDevices',JSON.stringify(DEVICES));
       }
       let res=await fetch(FB_URL,{
         method:'PUT',
@@ -1014,128 +1104,45 @@ async function syncCloud(push){
     }else{
       let res=await fetch(FB_URL);
       if(!res.ok)throw 0;
-      let d=await res.json(),needPushHash=false;
-      if(d&&(d.appHash||d.appPin)){
-        let ch=d.appHash?
-          String(d.appHash).toLowerCase():
-          await hashPin(d.appPin);
-        if(!d.appHash&&d.appPin)needPushHash=true;
-        if(ch&&ch!==APP_HASH){
-          let auth=ls.getItem('rbAuthHash')===APP_HASH;
-          APP_HASH=ch;
-          ls.setItem('rbAppHash',APP_HASH);
-          if(auth)ls.setItem('rbAuthHash',APP_HASH);
-        }
-      }
-      if(d&&(d.adminHash||d.adminPin)){
-        let cah=d.adminHash?
-          String(d.adminHash).toLowerCase():
-          await hashPin(d.adminPin);
-        if(!d.adminHash&&d.adminPin)
-          needPushHash=true;
-        if(cah&&cah!==ADMIN_HASH){
-          ADMIN_HASH=cah;
-          ls.setItem('rbAdmHash',ADMIN_HASH);
-        }
-      }
-      if(d?.devices&&typeof d.devices==='object'){
-        let newDevStr=JSON.stringify({...DEVICES,...d.devices});
-        if(newDevStr!==JSON.stringify(DEVICES)){
-          DEVICES=JSON.parse(newDevStr);
-          if(DEVICES[DEV_ID]?.name)
-            ls.setItem('rbDevName',DEVICES[DEV_ID].name);
-          ls.setItem('rbDevices',newDevStr);
-          renderDeviceList();
-        }
-      }
-      if(Array.isArray(d?.actLogs)){
-        let newLogStr=JSON.stringify(d.actLogs);
-        if(newLogStr!==JSON.stringify(ACT_LOGS)){
-          ACT_LOGS=d.actLogs;
-          ls.setItem('rbActLogs',newLogStr);
-          renderActLogs();
-        }
-      }
-      if(Array.isArray(d?.plots)&&d.plots.length){
-        let nextPlots=normPlots(d.plots);
-        // เช็กว่าข้อมูลแปลงและรายการขายเปลี่ยนจากเดิมหรือไม่
-        if(JSON.stringify(nextPlots)!==JSON.stringify(PLOTS)){
-          PLOTS=nextPlots;
-          if(!PLOTS.some(p=>p.id===curPlotId))
-            curPlotId=PLOTS.at(0).id;
-          ls.setItem('rbPlotsV1',JSON.stringify(PLOTS));
-          refreshCurrentView();
-        }
-      }else if(d?.W){
-        let nextPlots=normPlots([{
-          id:'plot_1',name:'แปลงที่ 1',
-          W:d.W,H:d.H||[]
-        }]);
-        if(JSON.stringify(nextPlots)!==JSON.stringify(PLOTS)){
-          PLOTS=nextPlots;
-          curPlotId='plot_1';
-          ls.setItem('rbPlotsV1',JSON.stringify(PLOTS));
-          refreshCurrentView();
-        }
-        needPushHash=true;
-      }else if(PLOTS.length)needPushHash=true;
-      if(needPushHash)await syncCloud(1);
+      let d=await res.json();
+      if(await applyCloudData(d))await syncCloud(1);
     }
     let tm=new Date().toLocaleTimeString('th-TH');
     let msg=mergedCnt>0?
       `ผสานข้อมูลค้างส่ง ${mergedCnt} รายการแล้ว`:
-      (push?'ซิงค์ข้อมูลออนไลน์แล้ว':
-            'ออนไลน์พร้อมใช้งาน');
+      (push?'ซิงค์ข้อมูลออนไลน์แล้ว':'ออนไลน์พร้อมใช้งาน');
     syncStatus.innerText=`🟢 ${msg} (${tm})`;
     syncStatus.style.background="#e8f5e9";
     syncStatus.style.color="#1b5e20";
+    if(!fbStream||fbStream.readyState===2)startCloudStream();
   }catch(e){
     if(push)ls.setItem('rbDirty','1');
-    syncStatus.innerText=
-      "🔴 ไม่มีเน็ต (บันทึกในเครื่องแล้ว รอซิงค์)";
+    syncStatus.innerText="🔴 ไม่มีเน็ต (บันทึกในเครื่องแล้ว รอซิงค์)";
     syncStatus.style.background="#ffebee";
     syncStatus.style.color="#c62828";
   }finally{
     isSyncing=false;
   }
 }
-
-// เพิ่มฟังก์ชันช่วยอัปเดตเฉพาะตอนข้อมูลเปลี่ยนจริง
-function refreshCurrentView(){
-  init();
-  if(curTab==2)renderWList();
-  if(curTab==3){fillYears();renderYear();}
-  if(curTab==4){
-    fillPersonDropdown();
-    fillYears();renderPerson();
-  }
-  if(curTab==5){fillYears();renderDaily();}
-  if(curTab==6)initSlipPage();
-}
-
-
-
 window.addEventListener('online',()=>{
-  if(ls.getItem('rbAuthHash')===APP_HASH)
-    syncCloud(0);
+  if(ls.getItem('rbAuthHash')===APP_HASH){
+    syncCloud(ls.getItem('rbDirty')==='1'?1:0);
+    startCloudStream();
+  }
 });
 document.addEventListener('visibilitychange',()=>{
-  if(!document.hidden&&
-    ls.getItem('rbAuthHash')===APP_HASH){
+  if(document.hidden){
+    if(fbStream){fbStream.close();fbStream=null;}
+  }else if(ls.getItem('rbAuthHash')===APP_HASH){
     if(editIdx<0)dt.value=getThaiToday();
-    syncCloud(0);
+    syncCloud(ls.getItem('rbDirty')==='1'?1:0);
+    startCloudStream();
   }
 });
 setInterval(()=>{
   if(ls.getItem('rbAuthHash')!==APP_HASH)return;
-  if(ls.getItem('rbDirty')==='1'){
-    syncCloud(1);
-  }else if(editIdx<0&&
-    document.activeElement?.tagName!=='INPUT'){
-    syncCloud(0);
-  }
-},10000);
-
+  if(ls.getItem('rbDirty')==='1')syncCloud(1);
+},15000);
 function markEditRid(id){
   let a=JSON.parse(ls.getItem('rbEditRids')||'[]');
   if(!a.includes(id)){
@@ -1573,7 +1580,6 @@ function renderPerson(){
       `<p style="color:#666;text-align:center">`
       +`ไม่มีประวัติในปีที่เลือก</p>`)+`</div>`;
 }
-
 function delLog(idx,fromTab,dateStr){
   let H=getH(),item=H[idx];
   if(!item||!confirm(
@@ -1751,7 +1757,6 @@ function toggleAllSlips(f){
   });
   renderSlipPreview();
 }
-
 function renderSlipPreview(){
   let html="",plotHtml=PLOTS.length>1?
     `<div class="slip-plot">🌳 ${getCurPlot().name}</div>`:'';
@@ -1859,7 +1864,6 @@ function closeAdminPanel(){
   btnAdminToggle.classList.remove('hide');
   bkBox.value="";
 }
-
 async function changeAppPin(){
   let np=normPin(newPinInp.value);
   if(!/^\d{4,}$/.test(np))
