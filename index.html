@@ -427,7 +427,7 @@ th{background:#e8f5e9;text-align:center}
         style="font-size:12px;color:#999;cursor:pointer"
         onclick="toggleAdminPanel()">⚙️ ตั้งค่าขั้นสูง</span>
     </div>
-    <div id="adminPanel" class="admin-box hide">
+        <div id="adminPanel" class="admin-box hide">
       <div style="display:flex;
         justify-content:space-between;
         align-items:center;margin-bottom:10px">
@@ -454,6 +454,17 @@ th{background:#e8f5e9;text-align:center}
           style="font-size:13px"
           onclick="clearActLogs()">
           🗑️ ล้างประวัติการแก้ไข</button>
+      </div>
+      <div class="admin-sec">
+        <h3>🚀 อัปเดตระบบทุกเครื่อง</h3>
+        <button type="button" class="bo"
+          style="font-size:14px;margin-top:0"
+          onclick="forceUpdateAll()">
+          📢 บังคับรีเฟรชอัปเดตหน้าเว็บทุกเครื่อง</button>
+        <div style="font-size:12px;color:#546e7a;
+          margin-top:6px">
+          * กดปุ่มนี้หลังจากอัปไฟล์ index.html ขึ้นโฮสต์เสร็จแล้วเท่านั้น
+        </div>
       </div>
       <div class="admin-sec">
         <h3>📱 จัดการชื่อเรียกอุปกรณ์ทั้งหมด</h3>
@@ -538,17 +549,6 @@ th{background:#e8f5e9;text-align:center}
           onclick="factoryResetPlot()">
           3. Factory Reset แปลงนี้</button>
       </div>
-      <div class="admin-sec">
-        <h3>🚀 อัปเดตระบบทุกเครื่อง</h3>
-        <button type="button" class="bo"
-          style="font-size:14px;margin-top:0"
-          onclick="forceUpdateAll()">
-          📢 บังคับรีเฟรชอัปเดตหน้าเว็บทุกเครื่อง</button>
-        <div style="font-size:12px;color:#546e7a;
-          margin-top:6px">
-          * กดปุ่มนี้หลังจากอัปไฟล์ index.html ขึ้นโฮสต์เสร็จแล้วเท่านั้น
-        </div>
-      </div>
       <div class="admin-sec" style="margin-bottom:0">
         <h3>📦 สำรอง / กู้คืนข้อมูล</h3>
         <button type="button" class="bb"
@@ -565,6 +565,7 @@ th{background:#e8f5e9;text-align:center}
           📥 นำเข้าข้อมูลกู้คืน</button>
       </div>
     </div>
+
   </div>
 
   <div id="p3" class="box hide no-print"
