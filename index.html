@@ -2382,7 +2382,16 @@ function save(){
     +` ของ ${rec.wn}`
   );
   saveAllData();
-    alert("บันทึกแล้ว!");
+    // ฟังก์ชันเปิดกล่องแจ้งเตือน
+function showCustomAlert() {
+  document.getElementById("customAlert").style.display = "flex";
+}
+
+// ฟังก์ชันปิดกล่องแจ้งเตือน
+function closeCustomAlert() {
+  document.getElementById("customAlert").style.display = "none";
+}
+
   $('wt').value="";calc(0);
 }
 function editLog(idx,fromTab){
