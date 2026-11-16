@@ -534,7 +534,7 @@ style="padding:8px">
 <div class="top-bar">
 <div id="syncStatus"
 class="sync-bar">
-⏳ กำลังเชื่อมต่อฐานข้อมูล...
+⏳ กำลังเชื่อมต่อฐานข้อมูลออนไลน์...
 </div>
 <button type="button"
 class="lock-btn"
@@ -1097,9 +1097,38 @@ function getDeviceLabel(){
   let dt=getDeviceType();
   return dn?`${dt} [${dn}]`:dt;
 }
+async function pingDeviceOnline(){
+  let dn=(DEVICES[DEV_ID]?.name)
+    ||ls.getItem('rbDevName');
+  if(!dn||!navigator.onLine)
+    return;
+  let info={
+    name:dn,
+    type:getDeviceType(),
+    last:Date.now()
+  };
+  DEVICES[DEV_ID]=info;
+  ls.setItem('rbDevices',
+    JSON.stringify(DEVICES));
+  let u=FB_URL.replace(
+    '/rubberData.json',
+    `/rubberData/devices/`
+    +`${DEV_ID}.json`);
+  try{
+    await fetch(u,{
+      method:'PUT',
+      headers:{'Content-Type':
+        'application/json'},
+      body:JSON.stringify(info)
+    });
+  }catch(e){}
+}
 function renderDeviceList(){
   if(!$('devListBox'))return;
-  let keys=Object.keys(DEVICES);
+  let keys=Object.keys(DEVICES)
+    .sort((a,b)=>
+      (DEVICES[b].last||0)-
+      (DEVICES[a].last||0));
   if(!keys.length){
     $('devListBox').innerHTML=
     `<p style="font-size:13px;`
@@ -1107,11 +1136,37 @@ function renderDeviceList(){
     +`ยังไม่มีข้อมูลอุปกรณ์</p>`;
     return;
   }
+  let now=Date.now();
   $('devListBox').innerHTML=
   keys.map(k=>{
     let d=DEVICES[k];
-    let isMe=k===DEV_ID?
-    ' (เครื่องนี้)':'';
+    let isMe=k===DEV_ID;
+    let lastTxt='ไม่ทราบเวลา';
+    if(d.last){
+      let dt=new Date(d.last)
+        .toLocaleDateString(
+        'th-TH',{
+          day:'2-digit',
+          month:'short',
+          year:'2-digit',
+          hour:'2-digit',
+          minute:'2-digit'
+        });
+      let days=Math.floor(
+        (now-d.last)/86400000);
+      let ago=days>0?
+        ` (ไม่ได้ใช้งาน ${days} วัน)`:
+        ` (วันนี้)`;
+      lastTxt=dt+ago;
+    }
+    let delBtn=isMe?'':
+      `<button type="button" `
+      +`class="br" style=`
+      +`"width:auto;margin:0;`
+      +`padding:6px 8px;`
+      +`font-size:13px" `
+      +`onclick="adminDelDev(`
+      +`'${k}')">🗑️</button>`;
     return`<div style="border:`
     +`1px solid #cfd8dc;`
     +`padding:8px;`
@@ -1123,10 +1178,15 @@ function renderDeviceList(){
     +`margin-bottom:4px">`
     +`<b>${d.type}</b>`
     +`<span style="color:#2e7d32;`
-    +`font-weight:bold">${isMe}`
-    +`</span></div>`
+    +`font-weight:bold">`
+    +`${isMe?' (เครื่องนี้)':''}`
+    +`</span><div style=`
+    +`"font-size:11px;`
+    +`color:#78909c">`
+    +`ใช้งานล่าสุด: ${lastTxt}`
+    +`</div></div>`
     +`<div style="display:flex;`
-    +`gap:6px">`
+    +`gap:4px">`
     +`<input type="text" `
     +`id="dvinp_${k}" `
     +`value="${d.name||''}" `
@@ -1139,7 +1199,7 @@ function renderDeviceList(){
     +`white-space:nowrap" `
     +`onclick="adminRenameDev(`
     +`'${k}')">💾 บันทึก</button>`
-    +`</div></div>`;
+    +`${delBtn}</div></div>`;
   }).join('');
 }
 function adminRenameDev(k){
@@ -1163,6 +1223,25 @@ function adminRenameDev(k){
   saveAllData();
   renderDeviceList();
   alert("เปลี่ยนชื่อเรียบร้อยครับ");
+}
+function adminDelDev(k){
+  if(k===DEV_ID)return;
+  let nm=DEVICES[k]?.name||"อุปกรณ์";
+  if(!confirm(
+    `🗑️ ยืนยันลบอุปกรณ์ "${nm}"?`))
+    return;
+  let dd=JSON.parse(
+    ls.getItem('rbDelDevs')||'[]');
+  if(!dd.includes(k))dd.push(k);
+  ls.setItem('rbDelDevs',
+    JSON.stringify(dd));
+  delete DEVICES[k];
+  ls.setItem('rbDevices',
+    JSON.stringify(DEVICES));
+  addActLog(
+    `🗑️ แอดมินลบอุปกรณ์ "${nm}"`);
+  saveAllData();
+  renderDeviceList();
 }
 function addActLog(msg){
   let d=new Date();
@@ -1373,6 +1452,7 @@ async function checkPin(){
     $('appMain').classList
     .remove('hide');
     init();await syncCloud(0);
+    pingDeviceOnline();
     if(ls.getItem('rbDirty')==='1')
       syncCloud(1);
   }else{
@@ -1496,7 +1576,6 @@ $('dt').value=getThaiToday();
 let isSyncing=false,
 fbStream=null,
 lastSaveTime=0;
-
 function checkPendingUpdate(){
   if(isReloading||!pendingVer
     ||pendingVer===APP_VER)
@@ -1786,12 +1865,19 @@ async function applyCloudData(d){
   }
   if(d.devices&&
     typeof d.devices==='object'){
-    let newDevStr=JSON.stringify(
-      {...DEVICES,...d.devices});
+    let dd=new Set(JSON.parse(
+      ls.getItem('rbDelDevs')
+      ||'[]'));
+    let mergedDev={
+      ...DEVICES,...d.devices
+    };
+    dd.forEach(k=>
+      delete mergedDev[k]);
+    let newDevStr=
+      JSON.stringify(mergedDev);
     if(newDevStr!==
       JSON.stringify(DEVICES)){
-      DEVICES=
-        JSON.parse(newDevStr);
+      DEVICES=mergedDev;
       if(DEVICES[DEV_ID]?.name)
         ls.setItem('rbDevName',
           DEVICES[DEV_ID].name);
@@ -1877,54 +1963,6 @@ function startCloudStream(){
         .toLocaleTimeString(
         'th-TH');
       $('syncStatus').innerText=
-        `🟢 ซิงค์สด (${tm})`;
-      $('syncStatus').style
-        .background="#e8f5e9";
-      $('syncStatus').style
-        .color="#1b5e20";
-      if(needPush)
-        await syncCloud(1);
-    }catch(err){}
-  };
-  fbStream.addEventListener(
-    'put',onMsg);
-  fbStream.addEventListener(
-    'patch',onMsg);
-  fbStream.onerror=()=>{
-    $('syncStatus').innerText=
-      "🟡 เชื่อมต่อซิงค์ใหม่...";
-    $('syncStatus').style
-      .background="#fff8e1";
-    $('syncStatus').style
-      .color="#e65100";
-  };
-}
-function startCloudStream(){
-  if(fbStream)fbStream.close();
-  if(ls.getItem('rbAuthHash')
-    !==APP_HASH)return;
-  fbStream=
-    new EventSource(FB_URL);
-  const onMsg=async e=>{
-    if(ls.getItem('rbDirty')
-      ==='1'||editIdx>=0||
-      isSyncing||
-      Date.now()-lastSaveTime
-      <4000)return;
-    if(curTab==2&&
-      document.activeElement
-      ?.tagName==='INPUT')return;
-    try{
-      let pkt=JSON.parse(e.data);
-      if(!pkt||pkt.path!=='/'||
-        !pkt.data)return;
-      let needPush=
-        await applyCloudData(
-        pkt.data);
-      let tm=new Date()
-        .toLocaleTimeString(
-        'th-TH');
-      $('syncStatus').innerText=
         `🟢 ซิงค์สดอัตโนมัติ`
         +` (${tm})`;
       $('syncStatus').style
@@ -1968,9 +2006,19 @@ async function syncCloud(push){
           !isReloading&&
           oldD.appVer!==APP_VER)
           pendingVer=oldD.appVer;
-        if(oldD?.devices)
-          DEVICES={...oldD.devices,
-            ...DEVICES};
+        if(oldD?.devices){
+          let dd=new Set(JSON.parse(
+            ls.getItem('rbDelDevs')
+            ||'[]'));
+          let mergedDev={
+            ...oldD.devices,
+            ...DEVICES
+          };
+          dd.forEach(k=>
+            delete mergedDev[k]);
+          DEVICES=mergedDev;
+          ls.removeItem('rbDelDevs');
+        }
         if(Array.isArray(
           oldD?.actLogs)&&
           ls.getItem('rbClearLogs')
@@ -2070,13 +2118,13 @@ async function syncCloud(push){
     checkPendingUpdate();
   }
 }
-
 window.addEventListener(
   'online',()=>{
   if(ls.getItem('rbAuthHash')
     ===APP_HASH){
     syncCloud(ls.getItem(
       'rbDirty')==='1'?1:0);
+    pingDeviceOnline();
     startCloudStream();
   }
 });
@@ -2093,6 +2141,7 @@ document.addEventListener(
       getThaiToday();
     syncCloud(ls.getItem(
       'rbDirty')==='1'?1:0);
+    pingDeviceOnline();
     startCloudStream();
   }
 });
@@ -3686,7 +3735,8 @@ async function doRestore(){
     }else throw 0;
     ['rbDirty','rbDelRids',
      'rbEditRids','rbNewPids',
-     'rbDelPids','rbEditPids']
+     'rbDelPids','rbEditPids',
+     'rbDelDevs']
       .forEach(k=>
         ls.removeItem(k));
     ls.setItem('rbPlotsV1',
@@ -3730,6 +3780,7 @@ if(ls.getItem('rbAuthHash')
   $('appMain').classList
     .remove('hide');
   init();syncCloud(0);
+  pingDeviceOnline();
 }else{
   updatePinLockUI();
 }
