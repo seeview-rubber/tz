@@ -917,14 +917,15 @@ function save(){
     W[i].s=S.newS;H[editIdx]=rec;markEditRid(rid);markEditRid('w_'+W[i].id);
     addActLog(`✏️ [${pName}] แก้ไขยอด ${fmtThaiDate(rec.d,true)} ของ ${rec.wn}`);
     saveAllData();
-    showIosAlert("บันทึกการแก้ไขแล้ว!",()=>{cancelEdit();tab(rt);if(rt===5)showDayDetail(rd);});
+    showIosAlert(`บันทึกการแก้ไขของ\n${rec.wn} แล้ว!`,()=>{cancelEdit();tab(rt);if(rt===5)showDayDetail(rd);});
     return;
   }
   W[i].s=S.newS;H.push(rec);
   addActLog(`➕ [${pName}] เพิ่มยอด ${fmtThaiDate(rec.d,true)} ของ ${rec.wn}`);
   saveAllData();
-  showIosAlert("บันทึกแล้ว!",()=>{$('wt').value="";calc(0);});
+  showIosAlert(`บันทึกของ ${rec.wn} แล้ว!`,()=>{$('wt').value="";calc(0);});
 }
+
 function editLog(idx,fromTab){
   let W=getW(),item=getH()[idx];if(!item)return;
   let wIdx=W.findIndex(w=>w.id===item.wid);
