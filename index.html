@@ -142,14 +142,16 @@ th{background:#e8f5e9;text-align:center}
 <input type="date" id="dt">
 <label>ชื่อคนงาน</label>
 <select id="wSel" onchange="calc(0)"></select>
-<label>ราคายาง (บาท/กก.)</label>
-<input type="number" inputmode="decimal" id="prc" placeholder="เช่น 42" oninput="calc(0)">
-<label>น้ำหนักยาง (กก.)</label>
-<input type="number" inputmode="decimal" id="wt" placeholder="เช่น 1000" oninput="calc(0)">
 <div class="g2">
 <div><label>คนงาน (%)</label><input type="number" inputmode="numeric" id="wp" value="40" oninput="calc(0)"></div>
 <div><label>หักสะสม (%)</label><input type="number" inputmode="numeric" id="sp" value="10" oninput="calc(0)"></div>
 </div>
+<label>ราคายาง (บาท/กก.)</label>
+<input type="number" inputmode="decimal" id="prc" placeholder="เช่น 42" oninput="calc(0)">
+<label>น้ำหนักยาง (กก.)</label>
+<input type="number" inputmode="decimal" id="wt" placeholder="เช่น 1000" oninput="calc(0)">
+
+
 <div class="row"><span>ยอดขายรวม:</span><b id="vTot">0 บ.</b></div>
 <div class="row"><span>รายได้คนงาน:</span><b id="vInc">0 บ.</b></div>
 <label style="color:#e65100">หักสะสม (แก้ตัวเลขได้)</label>
