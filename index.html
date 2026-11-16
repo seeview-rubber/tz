@@ -467,10 +467,11 @@ function clearActLogs(){
 async function refreshActLogs(){
   if(!$('actLogBox'))return;
   $('actLogBox').innerHTML=`<p style="color:#1565c0;text-align:center;margin:10px 0">⏳ กำลังดึงข้อมูล...</p>`;
-  await syncCloud(0);
+  await syncCloud(ls.getItem('rbDirty')==='1'?1:0);
   renderActLogs();
   renderDeviceList();
 }
+
 function getThaiToday(){
   let d=new Date(Date.now()+7*3600000);
   return d.toISOString().slice(0,10);
