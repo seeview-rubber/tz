@@ -930,7 +930,7 @@ function save(){
     return;
   }
   W[i].s=S.newS;H.push(rec);
-  addActLog(`➕ [${pName}] เพิ่มยอด ${fmtThaiDate(rec.d,true)} ของ ${rec.wn} (${rec.w.toLocaleString()} กก., สุทธิ ${rec.p.toLocaleString()} บ.)`);
+  addActLog(`📝 [${pName}] จดขายยาง ${fmtThaiDate(rec.d,true)} ของ ${rec.wn} (นน. ${rec.w.toLocaleString()} กก., ราคา ${rec.pr} บ., สะสม ${rec.s.toLocaleString()} บาท, สุทธิ ${rec.p.toLocaleString()} บาท)`);
   saveAllData();
   showIosAlert(`บันทึกของ ${rec.wn} แล้ว!`,()=>{$('wt').value="";calc(0);});
 }
