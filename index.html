@@ -913,18 +913,28 @@ function save(){
   let rec={rid,wid:W[i].id,wn:W[i].n,d:$('dt').value,pr:+$('prc').value,w:+$('wt').value,t:S.tot,i:S.inc,s:S.sav,p:S.net,nt:editIdx>=0?(H[editIdx].nt||""):""};
   if(editIdx>=0){
     let old=H[editIdx],oldW=W.find(w=>w.id===old.wid),rt=editFromTab||4,rd=$('dt').value;
+    let diffs=[];
+    if(old.d!==rec.d)diffs.push(`วันที่ ${fmtThaiDate(old.d,true)} -> ${fmtThaiDate(rec.d,true)}`);
+    if(old.wn!==rec.wn)diffs.push(`คนงาน ${old.wn} -> ${rec.wn}`);
+    if(+old.w!==+rec.w)diffs.push(`นน. ${(+old.w).toLocaleString()} -> ${rec.w.toLocaleString()} กก.`);
+    if(+old.pr!==+rec.pr)diffs.push(`ราคา ${old.pr} -> ${rec.pr} บ.`);
+    if(+old.s!==+rec.s)diffs.push(`สะสม ${(+old.s).toLocaleString()} -> ${rec.s.toLocaleString()} บาท`);
+    if(+old.p!==+rec.p)diffs.push(`สุทธิ ${(+old.p).toLocaleString()} -> ${rec.p.toLocaleString()} บาท`);
+    let diffTxt=diffs.length?` (${diffs.join(', ')})`:"";
+
     if(oldW&&oldW.id!==W[i].id){oldW.s=Math.max(0,(+oldW.s||0)-old.s);markEditRid('w_'+oldW.id);}
     W[i].s=S.newS;H[editIdx]=rec;markEditRid(rid);markEditRid('w_'+W[i].id);
-    addActLog(`✏️ [${pName}] แก้ไขยอด ${fmtThaiDate(rec.d,true)} ของ ${rec.wn}`);
+    addActLog(`✏️ [${pName}] แก้ไขยอด ${fmtThaiDate(rec.d,true)} ของ ${rec.wn}${diffTxt}`);
     saveAllData();
-    showIosAlert(`บันทึกการแก้ไขของ\n${rec.wn} แล้ว!`,()=>{cancelEdit();tab(rt);if(rt===5)showDayDetail(rd);});
+    showIosAlert(`บันทึกการแก้ไขของ ${rec.wn} แล้ว!`,()=>{cancelEdit();tab(rt);if(rt===5)showDayDetail(rd);});
     return;
   }
   W[i].s=S.newS;H.push(rec);
-  addActLog(`➕ [${pName}] เพิ่มยอด ${fmtThaiDate(rec.d,true)} ของ ${rec.wn}`);
+  addActLog(`➕ [${pName}] เพิ่มยอด ${fmtThaiDate(rec.d,true)} ของ ${rec.wn} (${rec.w.toLocaleString()} กก., สุทธิ ${rec.p.toLocaleString()} บ.)`);
   saveAllData();
   showIosAlert(`บันทึกของ ${rec.wn} แล้ว!`,()=>{$('wt').value="";calc(0);});
 }
+
 
 function editLog(idx,fromTab){
   let W=getW(),item=getH()[idx];if(!item)return;
@@ -981,17 +991,18 @@ function restoreOldW(wid){
 function saveW(){
   let W=getW(),H=getH(),seen=new Set(),ids=new Set(W.map(x=>x.id)),changes=[];
   for(let i=0;i<W.length;i++){
-    let nm=stripNum($('en'+i)?.value||W[i].n),ns=+($('es'+i)?.value||0);
+    let nm=stripNum($('en'+i)?.value||W[i].n),ns=+($('es'+i)?.value||0),os=+W[i].s||0;
     if(!nm)return alert("กรุณากรอกชื่อให้ครบครับ");
     let low=nm.toLowerCase();if(seen.has(low))return alert(`ชื่อ "${nm}" ซ้ำกันครับ`);
     if(H.some(h=>!ids.has(h.wid)&&stripNum(h.wn).toLowerCase()===low))return alert(`ชื่อ "${nm}" ซ้ำประวัติเก่า!`);
-    if(W[i].n!==nm){changes.push(`ชื่อ ${W[i].n}➔${nm}`);markEditRid('w_'+W[i].id);}
-    if((+W[i].s||0)!==ns){changes.push(`สะสม ${nm}: ${ns} บ.`);markEditRid('w_'+W[i].id);}
+    if(W[i].n!==nm){changes.push(`ชื่อ ${W[i].n} -> ${nm}`);markEditRid('w_'+W[i].id);}
+    if(os!==ns){changes.push(`ยอดสะสม ${nm}: ${os.toLocaleString()} -> ${ns.toLocaleString()} บาท`);markEditRid('w_'+W[i].id);}
     seen.add(low);
   }
   if(changes.length)addActLog(`💰 [${getCurPlot().name}] แก้ไข: `+changes.join(', '));
   syncWInputs();saveAllData();init();renderWList();alert("บันทึกการแก้ไขแล้ว!");
 }
+
 function renderYear(){
   let y=$('yrSel').value,tc=0,tw=0,tt=0,ts=0,tp=0;
   let md=Array.from({length:12},()=>({dates:new Set(),w:0,t:0,s:0,p:0}));
@@ -1027,6 +1038,12 @@ function delLog(idx,fromTab,dateStr){
   if(wObj){wObj.s=Math.max(0,(+wObj.s||0)-item.s);markEditRid('w_'+wObj.id);}
   if(item.rid)markDelRid(item.rid);
   addActLog(`🗑️ [${getCurPlot().name}] ลบรายการ ${fmtThaiDate(item.d,true)} ของ ${item.wn}`);
+	// ในฟังก์ชัน delLog (ลบประวัติการขาย)
+addActLog(`🗑️ [${getCurPlot().name}] ลบรายการ ${fmtThaiDate(item.d,true)} ของ ${item.wn} (นน. ${(+item.w).toLocaleString()} กก., สะสม ${(+item.s).toLocaleString()} บาท, สุทธิ ${(+item.p).toLocaleString()} บาท)`);
+
+// ในฟังก์ชัน delW (ลบรายชื่อคนงาน)
+addActLog(`🗑️ [${getCurPlot().name}] ลบ "${W[i].n}" (ยอดสะสมเดิม ${(+W[i].s||0).toLocaleString()} บาท)`);
+
   H.splice(idx,1);saveAllData();calc(0);
   if(fromTab===5){renderDaily();if(dateStr&&H.some(x=>x.d===dateStr))showDayDetail(dateStr);}
   else renderPerson();
