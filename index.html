@@ -770,12 +770,10 @@ function startCloudStream(){
       if(needPush)await syncCloud(1);
     }catch(err){}
   };
-  fbStream.addEventListener('put',onMsg);
+   fbStream.addEventListener('put',onMsg);
   fbStream.addEventListener('patch',onMsg);
-  fbStream.onerror=()=>{
-    $('syncStatus').innerText="🟡 กำลังเชื่อมต่อซิงค์สดใหม่...";
-    $('syncStatus').style.background="#fff8e1";$('syncStatus').style.color="#e65100";
-  };
+  fbStream.onerror=()=>{};
+
 }
 async function syncCloud(push){
   if(isSyncing&&!push)return;
@@ -803,7 +801,6 @@ async function syncCloud(push){
         }
         if(dirty&&Array.isArray(oldD?.plots)&&oldD.plots.length){
           mergedCnt=mergeCloudPlots(oldD.plots);
-          if(mergedCnt>0)addActLog(`🔄 ผสานข้อมูลค้างส่ง (${mergedCnt} รายการ)`);
         }
       }
       let curP=getCurPlot();
