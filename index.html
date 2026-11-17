@@ -640,7 +640,7 @@ function checkPendingUpdate(){
   if(isBusy)return;
   isReloading=true;let v=pendingVer;pendingVer="";APP_VER=v;ls.setItem('rbAppVer',v);
   setTimeout(()=>{
-    alert("🔄 มีอัปเดตเวอร์ชันใหม่ กดตกลงเพื่อรีเฟรชครับ");
+    alert("🔄 มีอัปเดตเวอร์ชันใหม่ กดปิดเพื่อรีเฟรชครับ");
     let url=new URL(location.href);url.searchParams.set('v',v);location.replace(url.toString());
   },300);
 }
