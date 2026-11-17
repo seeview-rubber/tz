@@ -1081,7 +1081,14 @@ function renderDaily(){
 function showDayDetail(dateStr){
   let W=getW(),list=[];
   getH().forEach((x,idx)=>{if(x.d===dateStr){let w=W.find(w=>w.id===x.wid);list.push({...x,idx,name:w?w.n:(stripNum(x.wn)||`คนงาน ${x.wid}`)});}});
-  $('dailyDetail').innerHTML=`<div class="detail-box"><div style="display:flex;justify-content:space-between;align-items:center"><b style="color:#33691e">รายละเอียด ${fmtThaiDate(dateStr,false)}</b><button type="button" onclick="$('dailyDetail').innerHTML=''" style="width:auto;margin:0;padding:4px 10px;background:#757575;font-size:14px">ปิด</button></div><table><tr><th>ชื่อ</th><th>นน.</th><th>ยอดขาย</th><th>สะสม</th><th>สุทธิ</th><th>จัดการ</th></tr>`+list.map(c=>`<tr><td style="text-align:left"><b>${c.name}</b></td><td>${c.w.toLocaleString()}</td><td>${c.t.toLocaleString()}</td><td>${c.s.toLocaleString()}</td><td><b>${c.p.toLocaleString()}</b></td><td style="text-align:center;white-space:nowrap"><button type="button" class="act-sm bo" onclick="editLog(${c.idx},5)">แก้</button> <button type="button" class="act-sm br" onclick="delLog(${c.idx},5,'${dateStr}')">ลบ</button></td></tr>`).join('')+`</table></div>`;
+  $('dailyDetail').innerHTML=`<div class="detail-box"><div style="display:flex;justify-content:space-between;align-items:center;gap:6px"><b style="color:#33691e">รายละเอียด ${fmtThaiDate(dateStr,false)}</b><div style="display:flex;gap:4px"><button type="button" onclick="goToSlipDate('${dateStr}')" class="bb" style="width:auto;margin:0;padding:4px 10px;font-size:14px">🖨️ ดูสลิป</button><button type="button" onclick="$('dailyDetail').innerHTML=''" style="width:auto;margin:0;padding:4px 10px;background:#757575;font-size:14px">ปิด</button></div></div><table><tr><th>ชื่อ</th><th>นน.</th><th>ยอดขาย</th><th>สะสม</th><th>สุทธิ</th><th>จัดการ</th></tr>`+list.map(c=>`<tr><td style="text-align:left"><b>${c.name}</b></td><td>${c.w.toLocaleString()}</td><td>${c.t.toLocaleString()}</td><td>${c.s.toLocaleString()}</td><td><b>${c.p.toLocaleString()}</b></td><td style="text-align:center;white-space:nowrap"><button type="button" class="act-sm bo" onclick="editLog(${c.idx},5)">แก้</button> <button type="button" class="act-sm br" onclick="delLog(${c.idx},5,'${dateStr}')">ลบ</button></td></tr>`).join('')+`</table></div>`;
+}
+function goToSlipDate(dateStr){
+  tab(6);
+  if($('prDateSel')){
+    $('prDateSel').value=dateStr;
+    renderSlipList();
+  }
 }
 function initSlipPage(){
   let dates=[...new Set(getH().map(x=>x.d))].sort((a,b)=>b.localeCompare(a));
