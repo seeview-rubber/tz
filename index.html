@@ -381,9 +381,12 @@ async function pingDeviceOnline(){
     let chk=await fetch(u);
     if(chk.ok){
       let cur=await chk.json();
-      if(cur===null&&DEVICES[DEV_ID]){
+      if(cur===null&&ls.getItem('rbDevSynced')==='1'){
         delete DEVICES[DEV_ID];
         ls.removeItem('rbDevName');
+        ls.removeItem('rbDevSynced');
+        DEV_ID='dev_'+Date.now()+'_'+Math.floor(Math.random()*1000);
+        ls.setItem('rbDevId',DEV_ID);
         ls.setItem('rbDevices',JSON.stringify(DEVICES));
         lockApp();
         return;
@@ -397,9 +400,11 @@ async function pingDeviceOnline(){
     DEVICES[DEV_ID]=info;
     ls.setItem('rbDevices',JSON.stringify(DEVICES));
     updateDeviceTimes();
-    await fetch(u,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(info)});
+    let res=await fetch(u,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(info)});
+    if(res.ok)ls.setItem('rbDevSynced','1');
   }catch(e){}
 }
+
 
 function formatLastSeen(last,now){
   if(!last)return'ไม่ทราบเวลา';
@@ -780,6 +785,9 @@ function startCloudStream(){
             delete DEVICES[devKey];
             if(devKey===DEV_ID){
               ls.removeItem('rbDevName');
+              ls.removeItem('rbDevSynced');
+              DEV_ID='dev_'+Date.now()+'_'+Math.floor(Math.random()*1000);
+              ls.setItem('rbDevId',DEV_ID);
               ls.setItem('rbDevices',JSON.stringify(DEVICES));
               lockApp();
               return;
