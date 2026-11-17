@@ -376,15 +376,31 @@ function getDeviceLabel(){
 async function pingDeviceOnline(){
   let dn=(DEVICES[DEV_ID]?.name)||ls.getItem('rbDevName');
   if(!dn||!navigator.onLine)return;
-  let info={name:dn,type:getDeviceType(),last:Date.now()};
-  DEVICES[DEV_ID]=info;
-  ls.setItem('rbDevices',JSON.stringify(DEVICES));
-  updateDeviceTimes();
   let u=FB_URL.replace('/rubberData.json',`/rubberData/devices/${DEV_ID}.json`);
   try{
+    let chk=await fetch(u);
+    if(chk.ok){
+      let cur=await chk.json();
+      if(cur===null&&DEVICES[DEV_ID]){
+        delete DEVICES[DEV_ID];
+        ls.removeItem('rbDevName');
+        ls.setItem('rbDevices',JSON.stringify(DEVICES));
+        lockApp();
+        return;
+      }
+      if(cur?.name&&cur.name!==dn){
+        dn=cur.name;
+        ls.setItem('rbDevName',dn);
+      }
+    }
+    let info={name:dn,type:getDeviceType(),last:Date.now()};
+    DEVICES[DEV_ID]=info;
+    ls.setItem('rbDevices',JSON.stringify(DEVICES));
+    updateDeviceTimes();
     await fetch(u,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(info)});
   }catch(e){}
 }
+
 function formatLastSeen(last,now){
   if(!last)return'ไม่ทราบเวลา';
   let dt=new Date(last).toLocaleDateString('th-TH',{day:'2-digit',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});
@@ -434,19 +450,24 @@ function adminRenameDev(k){
   renderDeviceList();
   alert("เปลี่ยนชื่อเรียบร้อยครับ");
 }
-function adminDelDev(k){
+async function adminDelDev(k){
   if(k===DEV_ID)return;
   let nm=DEVICES[k]?.name||"อุปกรณ์";
-  if(!confirm(`🗑️ ยืนยันลบอุปกรณ์ "${nm}"?`))return;
+  if(!confirm(`🗑️ ยืนยันลบอุปกรณ์ "${nm}"?\n(เครื่องนี้จะถูกออกจากระบบทันที)`))return;
   let dd=JSON.parse(ls.getItem('rbDelDevs')||'[]');
   if(!dd.includes(k))dd.push(k);
   ls.setItem('rbDelDevs',JSON.stringify(dd));
   delete DEVICES[k];
   ls.setItem('rbDevices',JSON.stringify(DEVICES));
   addActLog(`🗑️ แอดมินลบอุปกรณ์ "${nm}"`);
-  saveAllData();
   renderDeviceList();
+  try{
+    let u=FB_URL.replace('/rubberData.json',`/rubberData/devices/${k}.json`);
+    await fetch(u,{method:'DELETE'});
+  }catch(e){}
+  saveAllData();
 }
+
 function addActLog(msg){
   let d=new Date();
   let tm=d.toLocaleDateString('th-TH',{day:'2-digit',month:'short',year:'2-digit'})+" "+d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
@@ -748,13 +769,24 @@ function startCloudStream(){
   const onMsg=async e=>{
     try{
       let pkt=JSON.parse(e.data);
-      if(!pkt||!pkt.data)return;
+      if(!pkt)return;
       if(pkt.path&&pkt.path.startsWith('/devices')){
         let dd=new Set(JSON.parse(ls.getItem('rbDelDevs')||'[]'));
-        if(pkt.path==='/devices'){DEVICES={...DEVICES,...pkt.data};}
-        else{
+        if(pkt.path==='/devices'){
+          DEVICES=pkt.data||{};
+        }else{
           let devKey=pkt.path.replace('/devices/','');
-          if(devKey&&!dd.has(devKey))DEVICES[devKey]=pkt.data;
+          if(pkt.data===null){
+            delete DEVICES[devKey];
+            if(devKey===DEV_ID){
+              ls.removeItem('rbDevName');
+              ls.setItem('rbDevices',JSON.stringify(DEVICES));
+              lockApp();
+              return;
+            }
+          }else if(devKey&&!dd.has(devKey)){
+            DEVICES[devKey]=pkt.data;
+          }
         }
         dd.forEach(k=>delete DEVICES[k]);
         ls.setItem('rbDevices',JSON.stringify(DEVICES));
@@ -762,6 +794,7 @@ function startCloudStream(){
         else renderDeviceList();
         return;
       }
+      if(!pkt.data)return;
       if(ls.getItem('rbDirty')==='1'||editIdx>=0||isSyncing||Date.now()-lastSaveTime<4000)return;
       if(curTab==2&&document.activeElement?.tagName==='INPUT')return;
       if(pkt.path!=='/')return;
@@ -772,11 +805,11 @@ function startCloudStream(){
       if(needPush)await syncCloud(1);
     }catch(err){}
   };
-   fbStream.addEventListener('put',onMsg);
+  fbStream.addEventListener('put',onMsg);
   fbStream.addEventListener('patch',onMsg);
   fbStream.onerror=()=>{};
-
 }
+
 async function syncCloud(push){
   if(isSyncing&&!push)return;
   isSyncing=true;
