@@ -17,6 +17,7 @@ label{display:block;font-weight:bold;margin:10px 0 4px}
 input,select,textarea{width:100%;max-width:100%;min-width:0;display:block;padding:10px;font-size:18px;font-weight:bold;border:2px solid #64b5f6;border-radius:8px;background:#e3f2fd;color:#0d47a1;-webkit-appearance:none;appearance:none}
 input[type="date"]{min-height:46px}
 .yel{background:#fff8e1;border-color:#ffb300;color:#e65100}
+.yel::placeholder{color:#78909c;opacity:1;font-weight:bold}
 .g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px}
 .g2>div{min-width:0}
 button{width:100%;max-width:100%;padding:10px 6px;font-size:15px;font-weight:bold;border:0;border-radius:8px;color:#fff;margin-top:8px;cursor:pointer}
@@ -155,7 +156,7 @@ th{background:#e8f5e9;text-align:center}
 <div class="row"><span>ยอดขายรวม:</span><b id="vTot">0 บ.</b></div>
 <div class="row"><span>รายได้คนงาน:</span><b id="vInc">0 บ.</b></div>
 <label style="color:#e65100">หักสะสม (แก้ตัวเลขได้)</label>
-<input type="number" inputmode="decimal" id="mSav" class="yel" value="0" oninput="calc(1)">
+<input type="number" inputmode="decimal" id="mSav" class="yel" placeholder="0" oninput="calc(1)">
 <div class="row"><span>จ่ายสุทธิ:</span><span class="big" id="vNet">0 บ.</span></div>
 <div class="row" style="border:0"><span>สะสมเดิม (<span id="vOld">0</span>) ➔ ใหม่:</span><b style="color:#0d47a1" id="vNew">0 บ.</b></div>
 <button type="button" id="btnSave" class="bg" onclick="save()">💾 บันทึกยอดเงินนี้</button>
@@ -897,8 +898,11 @@ function calc(man){
   let i=+$('wSel').value||0;
   let tot=Math.round((+$('wt').value||0)*(+$('prc').value||0)*100)/100;
   let inc=Math.round(tot*(+$('wp').value||0))/100;
-  let sav=man?(+$('mSav').value||0):Math.round(inc*(+$('sp').value||0))/100;
-  if(!man)$('mSav').value=sav;
+  let autoSav=Math.round(inc*(+$('sp').value||0))/100;
+  $('mSav').placeholder=autoSav;
+  if(!man)$('mSav').value="";
+  let raw=$('mSav').value.trim();
+  let sav=raw===""?autoSav:(+raw||0);
   let base=getBaseSav(i),net=Math.round((inc-sav)*100)/100,newS=Math.round((base+sav)*100)/100;
   S={tot,inc,sav,net,newS};
   $('vTot').innerText=tot.toLocaleString()+" บ.";$('vInc').innerText=inc.toLocaleString()+" บ.";
@@ -931,7 +935,7 @@ function save(){
   W[i].s=S.newS;H.push(rec);
   addActLog(`📝 [${pName}] จดขายยาง ${fmtThaiDate(rec.d,true)} ของ ${rec.wn} (นน. ${rec.w.toLocaleString()} กก., ราคา ${rec.pr} บ., สะสม ${rec.s.toLocaleString()} บาท, สุทธิ ${rec.p.toLocaleString()} บาท)`);
   saveAllData();
-  showIosAlert(`บันทึกของ ${rec.wn} แล้ว!`,()=>{$('wt').value="";calc(0);});
+  showIosAlert(`บันทึกของ ${rec.wn} แล้ว!`,()=>{$('wt').value="";$('mSav').value="";calc(0);});
 }
 
 
@@ -941,13 +945,16 @@ function editLog(idx,fromTab){
   if(wIdx<0)return alert("คนงานนี้ถูกลบไปแล้ว กรุณากด 'ดึงคนงานเก่า' ก่อน");
   editIdx=idx;editFromTab=fromTab||4;$('wSel').value=wIdx;$('dt').value=item.d;$('prc').value=item.pr;$('wt').value=item.w;
   $('wp').value=item.t?Math.round((item.i/item.t)*1000)/10:40;$('sp').value=item.i?Math.round((item.s/item.i)*1000)/10:10;
-  $('mSav').value=item.s;$('p1Title').innerText="✏️ แก้ไขรายการขายเก่า";
+  let autoS=Math.round(item.i*(+$('sp').value||10))/100;
+  $('mSav').value=(+item.s!==autoS)?item.s:"";
+  $('p1Title').innerText="✏️ แก้ไขรายการขายเก่า";
   $('editBanner').classList.remove('hide');$('btnCancelEdit').classList.remove('hide');
   $('btnSave').innerText="💾 บันทึกการแก้ไขรายการนี้";$('btnSave').className="bo";calc(1);tab(1);
 }
+
 function cancelEdit(){
   let wasEdit=editIdx>=0,rt=editFromTab||4,rd=$('dt').value;
-  editIdx=-1;$('wt').value="";$('dt').value=getThaiToday();$('p1Title').innerText="🌳 จดขายขี้ยางก้อน";
+  editIdx=-1;$('wt').value="";$('mSav').value="";$('dt').value=getThaiToday();$('p1Title').innerText="🌳 จดขายขี้ยางก้อน";
   $('editBanner').classList.add('hide');$('btnCancelEdit').classList.add('hide');
   $('btnSave').innerText="💾 บันทึกยอดเงินนี้";$('btnSave').className="bg";calc(0);
   if(wasEdit){tab(rt);if(rt===5&&rd)showDayDetail(rd);}
