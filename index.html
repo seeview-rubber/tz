@@ -1098,15 +1098,34 @@ addActLog(`🗑️ [${getCurPlot().name}] ลบ "${W[i].n}" (ยอดสะส
 }
 function saveSlipPdf(){
   if(!$('slipPreview').querySelector('.slip-page'))return alert("กรุณาติ๊กเลือกอย่างน้อย 1 รายการครับ");
+  
+  let st=document.querySelector('style').innerHTML;
+  let printHtml=`<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>พิมพ์สลิปขายขี้ยาง</title><style>${st}@page{size:A4 portrait;margin:0}@media print{html,body{width:210mm;margin:0!important;padding:0!important;background:#fff!important}.slip-page{width:210mm;height:274mm;padding:6mm;display:flex!important;align-items:center;justify-content:center;page-break-after:always;break-after:page;overflow:hidden;box-sizing:border-box}.slip-page:last-child{page-break-after:auto;break-after:auto}}</style></head><body style="background:#fff;margin:0;padding:0">${$('slipPreview').innerHTML}</body></html>`;
+
+  // ตรวจสอบว่าเป็น iOS และเปิดในโหมดแอปหน้าจอโฮม (Standalone) หรือไม่
+  let isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  let isStandalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
+
+  if(isIOS&&isStandalone){
+    let pw=window.open('','_blank');
+    if(!pw)return alert("กรุณาอนุญาตป๊อปอัป (Pop-up) ในการตั้งค่า Safari ก่อนครับ");
+    pw.document.open();
+    pw.document.write(printHtml.replace('</body>','<script>window.onload=function(){setTimeout(function(){window.print();},400);};<\/script></body>'));
+    pw.document.close();
+    return;
+  }
+
+  // สำหรับคอมพิวเตอร์ หรือเปิดผ่านแอป Safari ปกติ
   $('printFrame')?.remove();
   let f=document.createElement('iframe');f.id='printFrame';f.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
   document.body.appendChild(f);
-  let doc=f.contentWindow.document,st=document.querySelector('style').innerHTML;
+  let doc=f.contentWindow.document;
   doc.open();
-  doc.write(`<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><style>${st}@page{size:A4 portrait;margin:0}@media print{html,body{width:210mm;margin:0!important;padding:0!important;background:#fff!important}.slip-page{width:210mm;height:274mm;padding:6mm;display:flex!important;align-items:center;justify-content:center;page-break-after:always;break-after:page;overflow:hidden;box-sizing:border-box}.slip-page:last-child{page-break-after:auto;break-after:auto}}</style></head><body>${$('slipPreview').innerHTML}</body></html>`);
+  doc.write(printHtml);
   doc.close();
   setTimeout(()=>{f.contentWindow.focus();f.contentWindow.print();},200);
 }
+
 function renderDaily(){
   let y=$('dYrSel').value,m=$('dMoSel').value,dm=new Map(),tw=0,tt=0;$('dailyDetail').innerHTML="";
   getH().forEach(x=>{
