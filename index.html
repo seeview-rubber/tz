@@ -1098,20 +1098,30 @@ addActLog(`🗑️ [${getCurPlot().name}] ลบ "${W[i].n}" (ยอดสะส
 }
 function saveSlipPdf(){
   if(!$('slipPreview').querySelector('.slip-page'))return alert("กรุณาติ๊กเลือกอย่างน้อย 1 รายการครับ");
-  
-  let st=document.querySelector('style').innerHTML;
-  let printHtml=`<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>พิมพ์สลิปขายขี้ยาง</title><style>${st}@page{size:A4 portrait;margin:0}@media print{html,body{width:210mm;margin:0!important;padding:0!important;background:#fff!important}.slip-page{width:210mm;height:274mm;padding:6mm;display:flex!important;align-items:center;justify-content:center;page-break-after:always;break-after:page;overflow:hidden;box-sizing:border-box}.slip-page:last-child{page-break-after:auto;break-after:auto}}</style></head><body style="background:#fff;margin:0;padding:0">${$('slipPreview').innerHTML}</body></html>`;
 
-  // ตรวจสอบว่าเป็น iOS และเปิดในโหมดแอปหน้าจอโฮม (Standalone) หรือไม่
   let isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
   let isStandalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
 
   if(isIOS&&isStandalone){
-    let pw=window.open('','_blank');
-    if(!pw)return alert("กรุณาอนุญาตป๊อปอัป (Pop-up) ในการตั้งค่า Safari ก่อนครับ");
-    pw.document.open();
-    pw.document.write(printHtml.replace('</body>','<script>window.onload=function(){setTimeout(function(){window.print();},400);};<\/script></body>'));
-    pw.document.close();
+    // เตรียมข้อมูลที่เลือกไว้เพื่อส่งไปเปิดใน Safari ปกติ
+    let selIdx=[];
+    curSlipItems.forEach((_,i)=>{if($('schk'+i)?.checked)selIdx.push(i);});
+    let payload={
+      plot:curPlotId,
+      date:$('prDateSel').value,
+      sum:!!$('schkSum')?.checked,
+      idx:selIdx
+    };
+    // เปิดหน้าเว็บตัวเองในแอป Safari ตัวหลักพร้อมพารามิเตอร์สั่งพิมพ์
+    let u=new URL(location.href);
+    u.searchParams.set('autopdf',encodeURIComponent(JSON.stringify(payload)));
+    let a=document.createElement('a');
+    a.href=u.toString();
+    a.target='_blank';
+    a.rel='noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
     return;
   }
 
@@ -1119,12 +1129,13 @@ function saveSlipPdf(){
   $('printFrame')?.remove();
   let f=document.createElement('iframe');f.id='printFrame';f.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
   document.body.appendChild(f);
-  let doc=f.contentWindow.document;
+  let doc=f.contentWindow.document,st=document.querySelector('style').innerHTML;
   doc.open();
-  doc.write(printHtml);
+  doc.write(`<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><style>${st}@page{size:A4 portrait;margin:0}@media print{html,body{width:210mm;margin:0!important;padding:0!important;background:#fff!important}.slip-page{width:210mm;height:274mm;padding:6mm;display:flex!important;align-items:center;justify-content:center;page-break-after:always;break-after:page;overflow:hidden;box-sizing:border-box}.slip-page:last-child{page-break-after:auto;break-after:auto}}</style></head><body>${$('slipPreview').innerHTML}</body></html>`);
   doc.close();
   setTimeout(()=>{f.contentWindow.focus();f.contentWindow.print();},200);
 }
+
 
 function renderDaily(){
   let y=$('dYrSel').value,m=$('dMoSel').value,dm=new Map(),tw=0,tt=0;$('dailyDetail').innerHTML="";
@@ -1277,6 +1288,41 @@ if(ls.getItem('rbAuthHash')===APP_HASH){
   ensureDeviceName();$('loginBox').classList.add('hide');$('appMain').classList.remove('hide');
   init();syncCloud(0);pingDeviceOnline();
 }else{updatePinLockUI();}
+// ... โค้ดเดิมของคุณด้านบน ...
+
+if(ls.getItem('rbAuthHash')===APP_HASH){
+  ensureDeviceName();$('loginBox').classList.add('hide');$('appMain').classList.remove('hide');
+  init();syncCloud(0);pingDeviceOnline();
+}else{updatePinLockUI();}
+
+// ⬇️ วางโค้ดจุดที่ 2 ต่อท้ายตรงนี้เลยครับ ⬇️
+(async function checkAutoPdfFromApp(){
+  let sp=new URLSearchParams(location.search);
+  let raw=sp.get('autopdf');
+  if(!raw)return;
+  try{
+    let cfg=JSON.parse(decodeURIComponent(raw));
+    history.replaceState(null,'',location.pathname);
+    $('loginBox').classList.add('hide');
+    $('appMain').classList.remove('hide');
+    await syncCloud(0);
+    if(cfg.plot&&PLOTS.some(p=>p.id===cfg.plot))curPlotId=cfg.plot;
+    init();
+    tab(6);
+    if(cfg.date&&$('prDateSel')){
+      $('prDateSel').value=cfg.date;
+      renderSlipList();
+    }
+    if($('schkSum'))$('schkSum').checked=!!cfg.sum;
+    curSlipItems.forEach((_,i)=>{if($('schk'+i))$('schk'+i).checked=cfg.idx.includes(i);});
+    renderSlipPreview();
+    setTimeout(()=>{window.print();},600);
+  }catch(e){}
+})();
+</script>
+</body>
+</html>
+
 </script>
 </body>
 </html>
