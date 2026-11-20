@@ -1266,8 +1266,6 @@ function init(){
   $('dMoSel').value=curMo!==""?curMo:nowMo;calc(0);
 }
 
-// 👉 นำโค้ดมาวางแทรกตรงนี้ครับ
-
 document.addEventListener('keydown', e => {
   if (e.target.type === 'number' && ['-', '+', 'e', 'E'].includes(e.key)) {
     e.preventDefault();
@@ -1281,12 +1279,8 @@ document.addEventListener('input', e => {
       e.target.value = val.replace(/[-+]/g, '');
     }
   }
-  if (['pinInp', 'newPinInp', 'newAdminPinInp'].includes(e.target.id)) {
-    e.target.value = normPin(e.target.value).replace(/\D/g, '');
-  }
 });
 
-// 👆 จบโค้ดที่วางแทรก (บรรทัดถัดไปจะเป็น function fillPersonDropdown)
 
 function fillPersonDropdown(){
 
