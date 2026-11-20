@@ -725,9 +725,8 @@ async function applyCloudData(d){
     let ch=d.appHash?String(d.appHash).toLowerCase():await hashPin(d.appPin);
     if(!d.appHash&&d.appPin)needPushHash=true;
     if(ch&&ch!==APP_HASH){
-      let auth=ls.getItem('rbAuthHash')===APP_HASH;
       APP_HASH=ch;ls.setItem('rbAppHash',APP_HASH);
-      if(auth)ls.setItem('rbAuthHash',APP_HASH);
+      if(ls.getItem('rbAuthHash'))lockApp();
     }
   }
   if(d.adminHash||d.adminPin){
