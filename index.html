@@ -571,7 +571,8 @@ async function checkPin(){
   }catch(e){}
   if(btn){btn.disabled=false;btn.innerText="🔓 เข้าใช้งาน";}
   let h=await hashPin(raw);
-  let valid=(h===APP_HASH||h===ADMIN_HASH||h===DEF_APP_HASH||h===DEF_ADM_HASH||(cloudApp&&h===cloudApp)||(cloudAdm&&h===cloudAdm));
+  let valid=(h===APP_HASH||h===ADMIN_HASH||(cloudApp&&h===cloudApp)||(cloudAdm&&h===cloudAdm));
+
   if(valid){
     ls.removeItem('rbPinFails');ls.removeItem('rbPinLockUntil');
     ensureDeviceName();
@@ -1084,11 +1085,6 @@ function delLog(idx,fromTab,dateStr){
   if(wObj){wObj.s=Math.max(0,(+wObj.s||0)-item.s);markEditRid('w_'+wObj.id);}
   if(item.rid)markDelRid(item.rid);
   addActLog(`🗑️ [${getCurPlot().name}] ลบรายการ ${fmtThaiDate(item.d,true)} ของ ${item.wn}`);
-	// ในฟังก์ชัน delLog (ลบประวัติการขาย)
-addActLog(`🗑️ [${getCurPlot().name}] ลบรายการ ${fmtThaiDate(item.d,true)} ของ ${item.wn} (นน. ${(+item.w).toLocaleString()} กก., สะสม ${(+item.s).toLocaleString()} บาท, สุทธิ ${(+item.p).toLocaleString()} บาท)`);
-
-// ในฟังก์ชัน delW (ลบรายชื่อคนงาน)
-addActLog(`🗑️ [${getCurPlot().name}] ลบ "${W[i].n}" (ยอดสะสมเดิม ${(+W[i].s||0).toLocaleString()} บาท)`);
 
   H.splice(idx,1);saveAllData();calc(0);
   if(fromTab===5){renderDaily();if(dateStr&&H.some(x=>x.d===dateStr))showDayDetail(dateStr);}
