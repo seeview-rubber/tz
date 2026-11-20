@@ -281,22 +281,6 @@ th{background:#e8f5e9;text-align:center}
 <div id="slipPreview"></div>
 </div>
 </div>
-// ป้องกันการพิมพ์เครื่องหมายติดลบและสัญลักษณ์ในช่องตัวเลขทุกช่อง
-document.addEventListener('keydown', e => {
-  if (e.target.type === 'number' && ['-', '+', 'e', 'E'].includes(e.key)) {
-    e.preventDefault();
-  }
-});
-
-document.addEventListener('input', e => {
-  if (e.target.type === 'number') {
-    let val = String(e.target.value);
-    if (val.includes('-') || val.includes('+')) {
-      e.target.value = val.replace(/[-+]/g, '');
-    }
-  }
-});
-
 <script>
 const $=id=>document.getElementById(id);
 let iosAlertCb=null;
@@ -1269,6 +1253,43 @@ if(ls.getItem('rbAuthHash')===APP_HASH){
   ensureDeviceName();$('loginBox').classList.add('hide');$('appMain').classList.remove('hide');
   init();syncCloud(0);pingDeviceOnline();
 }else{updatePinLockUI();}
+
+function init(){
+  renderPlotSelector();let W=getW();
+  if(!W.length){setW([{id:Date.now(),n:"คนงาน 1",s:0}]);W=getW();}
+  let v=$('wSel').value||0;
+  $('wSel').innerHTML=W.map((x,i)=>`<option value="${i}">${x.n}</option>`).join('');
+  $('wSel').value=W[v]?v:0;
+  let curMo=$('dMoSel').value;
+  $('dMoSel').innerHTML=`<option value="all">ทุกเดือน</option>`+MF.map((m,i)=>`<option value="${i}">${m}</option>`).join('');
+  let nowMo=new Date(Date.now()+7*3600000).getMonth();
+  $('dMoSel').value=curMo!==""?curMo:nowMo;calc(0);
+}
+
+// 👉 นำโค้ดมาวางแทรกตรงนี้ครับ
+
+document.addEventListener('keydown', e => {
+  if (e.target.type === 'number' && ['-', '+', 'e', 'E'].includes(e.key)) {
+    e.preventDefault();
+  }
+});
+
+document.addEventListener('input', e => {
+  if (e.target.type === 'number') {
+    let val = String(e.target.value);
+    if (val.includes('-') || val.includes('+')) {
+      e.target.value = val.replace(/[-+]/g, '');
+    }
+  }
+  if (['pinInp', 'newPinInp', 'newAdminPinInp'].includes(e.target.id)) {
+    e.target.value = normPin(e.target.value).replace(/\D/g, '');
+  }
+});
+
+// 👆 จบโค้ดที่วางแทรก (บรรทัดถัดไปจะเป็น function fillPersonDropdown)
+
+function fillPersonDropdown(){
+
 </script>
 </body>
 </html>
