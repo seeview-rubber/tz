@@ -1370,9 +1370,72 @@ async function deleteCurPlot(){
   ls.setItem('rbDelPids',JSON.stringify(delPids));ls.setItem('rbPlotsV1',JSON.stringify(PLOTS));ls.setItem('rbCurPlotId',curPlotId);
   ls.setItem('rbDirty','1');await syncCloud(1);switchPlot(curPlotId);alert("ลบแปลงเรียบร้อยแล้ว");
 }
-function clearPlotWorkers(){let c=getCurPlot();if(confirm(`⚠️ ล้างคนงาน "${c.name}"?`)){c.W=[{id:Date.now(),n:"คนงาน 1",s:0}];addActLog(`🧹 [${c.name}] ล้างคนงาน`);saveAllData();init();renderWList();alert("ล้างชื่อคนงานแล้ว");}}
-function clearPlotHistory(){let c=getCurPlot();if(confirm(`⚠️ ล้างประวัติ "${c.name}"?`)){c.H=[];addActLog(`🧹 [${c.name}] ล้างประวัติ`);saveAllData();init();alert("ล้างประวัติขายแล้ว");}}
-function factoryResetPlot(){let c=getCurPlot();if(confirm(`🚨 รีเซ็ต "${c.name}"?`)&&confirm(`ยืนยันสุดท้าย: ลบหมด?`)){c.W=[{id:Date.now(),n:"คนงาน 1",s:0}];c.H=[];addActLog(`🚨 [${c.name}] Reset`);saveAllData();init();renderWList();alert("รีเซ็ตเรียบร้อยแล้ว");}}
+
+async function clearPlotWorkers(){
+  let c=getCurPlot();
+  if(!confirm(`⚠️ ยืนยันล้างรายชื่อคนงานทั้งหมดใน "${c.name}"?`))return;
+  c.W=[{id:Date.now(),n:"คนงาน 1",s:0}];
+  addActLog(`🧹 [${c.name}] ล้างรายชื่อคนงาน`);
+  ls.setItem('rbPlotsV1',JSON.stringify(PLOTS));
+  ls.removeItem('rbDirty');
+  await pushDirectToCloud();
+  init();renderWList();
+  alert("ล้างชื่อคนงานเรียบร้อยแล้ว");
+}
+
+async function clearPlotHistory(){
+  let c=getCurPlot();
+  if(!confirm(`⚠️ ยืนยันล้างประวัติการขายทั้งหมดใน "${c.name}"?\n(ยอดสะสมของคนงานจะยังอยู่ครบ)`))return;
+  c.H=[];
+  addActLog(`🧹 [${c.name}] ล้างประวัติการขาย`);
+  ls.setItem('rbPlotsV1',JSON.stringify(PLOTS));
+  ls.removeItem('rbDirty');
+  await pushDirectToCloud();
+  init();
+  alert("ล้างประวัติขายเรียบร้อยแล้ว");
+}
+
+async function factoryResetPlot(){
+  let c=getCurPlot();
+  if(!confirm(`🚨 ยืนยัน Factory Reset แปลง "${c.name}"?\n(รายชื่อคนงาน ยอดสะสม และประวัติขายของแปลงนี้จะถูกลบทั้งหมด)`)||!confirm(`ยืนยันครั้งสุดท้าย: ลบข้อมูลทั้งหมดของ "${c.name}"?`))return;
+  c.W=[{id:Date.now(),n:"คนงาน 1",s:0}];
+  c.H=[];
+  addActLog(`🚨 [${c.name}] Factory Reset แปลง`);
+  ls.setItem('rbPlotsV1',JSON.stringify(PLOTS));
+  ls.removeItem('rbDirty');
+  await pushDirectToCloud();
+  init();renderWList();
+  alert("รีเซ็ตแปลงเรียบร้อยแล้ว");
+}
+
+async function pushDirectToCloud(){
+  lastSaveTime=Date.now();
+  let curP=getCurPlot();
+  try{
+    let res=await fetch(FB_URL,{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        appVer:pendingVer||APP_VER,
+        appHash:APP_HASH,
+        adminHash:ADMIN_HASH,
+        actLogs:ACT_LOGS,
+        devices:DEVICES,
+        plots:PLOTS,
+        W:curP.W,
+        H:curP.H
+      })
+    });
+    if(res.ok){
+      let tm=new Date().toLocaleTimeString('th-TH');
+      $('syncStatus').innerText=`🟢 ล้างข้อมูลและอัปเดตออนไลน์แล้ว (${tm})`;
+    }
+  }catch(e){
+    ls.setItem('rbDirty','1');
+  }
+}
+
+
 function doBackup(){let c=getCurPlot(),s=JSON.stringify({appVer:APP_VER,appHash:APP_HASH,adminHash:ADMIN_HASH,actLogs:ACT_LOGS,devices:DEVICES,plots:PLOTS,W:c.W,H:c.H});$('bkBox').value=s;navigator.clipboard.writeText(s);alert("คัดลอกสำรองแล้ว!");}
 async function doRestore(){
   try{
