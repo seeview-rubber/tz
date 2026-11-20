@@ -27,7 +27,7 @@ button{width:100%;max-width:100%;padding:10px 6px;font-size:15px;font-weight:bol
 .row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-bottom:1px dashed #ccc}
 .big{font-size:22px;color:#1b5e20;font-weight:bold}
 table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
-th,td{border:1px solid #ccc;padding:4px 3px;text-align:right;word-break:break-word}
+th,td{border:1px solid #ccc;padding:5px 6px;text-align:right;white-space:nowrap}
 th{background:#e8f5e9;text-align:center}
 .w-card{border:1px solid #ddd;padding:10px;border-radius:8px;margin-bottom:10px;background:#fafafa}
 .w-top{display:grid;grid-template-columns:minmax(0,1fr) 70px;gap:6px;margin-bottom:6px}
@@ -1178,8 +1178,9 @@ function renderYear(){
       }
     }
   });
-  $('yrSum').innerHTML=`<table><tr><th>เดือน</th><th>ครั้ง</th><th>นน.(กก.)</th><th>ยอดขาย</th><th>หักสะสม</th><th>หักอื่นๆ</th><th>จ่ายคนงาน</th><th>คงเหลือ</th></tr>`+M.map((m,i)=>{let c=md[i].dates.size,r=md[i].t-md[i].s-md[i].p;tc+=c;return`<tr><td style="text-align:center"><b>${m}</b></td><td style="text-align:center">${c||'-'}</td><td>${md[i].w?md[i].w.toLocaleString():'-'}</td><td>${md[i].t?md[i].t.toLocaleString():'-'}</td><td>${md[i].s?md[i].s.toLocaleString():'-'}</td><td style="color:#c62828">${md[i].d?md[i].d.toLocaleString():'-'}</td><td>${md[i].p?md[i].p.toLocaleString():'-'}</td><td><b>${md[i].t?r.toLocaleString():'-'}</b></td></tr>`;}).join('')+`<tr style="background:#fffde7;font-weight:bold"><td>รวม</td><td style="text-align:center">${tc}</td><td>${tw.toLocaleString()}</td><td>${tt.toLocaleString()}</td><td>${ts.toLocaleString()}</td><td style="color:#c62828">${td.toLocaleString()}</td><td>${tp.toLocaleString()}</td><td>${(tt-ts-tp).toLocaleString()}</td></tr></table>`;
+  $('yrSum').innerHTML=`<div style="overflow-x:auto;width:100%"><table><tr><th>เดือน</th><th>ครั้ง</th><th>นน.(กก.)</th><th>ยอดขาย</th><th>หักสะสม</th><th>หักอื่นๆ</th><th>จ่ายคนงาน</th><th>คงเหลือ</th></tr>`+M.map((m,i)=>{let c=md[i].dates.size,r=md[i].t-md[i].s-md[i].p;tc+=c;return`<tr><td style="text-align:center"><b>${m}</b></td><td style="text-align:center">${c||'-'}</td><td>${md[i].w?md[i].w.toLocaleString():'-'}</td><td>${md[i].t?md[i].t.toLocaleString():'-'}</td><td>${md[i].s?md[i].s.toLocaleString():'-'}</td><td style="color:#c62828">${md[i].d?md[i].d.toLocaleString():'-'}</td><td>${md[i].p?md[i].p.toLocaleString():'-'}</td><td><b>${md[i].t?r.toLocaleString():'-'}</b></td></tr>`;}).join('')+`<tr style="background:#fffde7;font-weight:bold"><td>รวม</td><td style="text-align:center">${tc}</td><td>${tw.toLocaleString()}</td><td>${tt.toLocaleString()}</td><td>${ts.toLocaleString()}</td><td style="color:#c62828">${td.toLocaleString()}</td><td>${tp.toLocaleString()}</td><td>${(tt-ts-tp).toLocaleString()}</td></tr></table></div>`;
 }
+
 
 let showPersonLogs=false;
 function togglePersonLogs(){
