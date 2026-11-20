@@ -619,6 +619,18 @@ function lockApp(){
   $('appMain').classList.add('hide');$('loginBox').classList.remove('hide');
   updatePinLockUI();
 }
+function applyViewMode(){
+  let isWide=ls.getItem('rbViewWide')==='1';
+  document.body.classList.toggle('wide-mode',isWide);
+  if($('btnViewMode'))$('btnViewMode').innerText=isWide?'📱 กะทัดรัด':'↔️ เต็มจอ';
+}
+function toggleViewMode(){
+  let next=ls.getItem('rbViewWide')!=='1';
+  ls.setItem('rbViewWide',next?'1':'0');
+  applyViewMode();
+}
+applyViewMode();
+
 function normPlots(arr){
   return arr.map((p,idx)=>({
     id:p.id||('plot_'+(idx+1)),
