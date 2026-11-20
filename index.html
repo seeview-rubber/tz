@@ -151,6 +151,10 @@ th{background:#e8f5e9;text-align:center}
 <select id="wSel" onchange="calc(0)"></select>
 <label>น้ำหนักยาง (กก.)</label>
 <input type="number" inputmode="decimal" id="wt" placeholder="เช่น 1000" oninput="calc(0)">
+<label style="color:#c62828">รายการหักอื่นๆ (เพิ่มได้หลายรายการ)</label>
+<div id="dedList"></div>
+<button type="button" class="bo" style="padding:7px;font-size:14px;margin-top:4px;margin-bottom:8px" onclick="addDedRow()">➕ เพิ่มรายการหัก (ค่าปุ๋ย / น้ำกรด / อื่นๆ)</button>
+
 
 
 <div class="row"><span>ยอดขายรวม:</span><b id="vTot">0 บ.</b></div>
@@ -954,6 +958,61 @@ function fillYears(){
   [$('yrSel'),$('pYrSel'),$('dYrSel')].forEach(el=>{let c=el.value;el.innerHTML=opts;if(c)el.value=c;});
 }
 function getBaseSav(i){let W=getW(),H=getH(),b=+W[i].s||0;return(editIdx>=0&&H[editIdx]?.wid===W[i].id)?Math.max(0,b-H[editIdx].s):b;}
+let DED_ITEMS=[];
+
+function renderDedList(){
+  let box=$('dedList');
+  if(!box)return;
+  box.innerHTML=DED_ITEMS.map((item,idx)=>{
+    let isCustom=item.type==='custom';
+    return`<div style="border:1px solid #ef9a9a;background:#fff5f5;padding:8px;border-radius:8px;margin-bottom:6px">
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) 110px 38px;gap:5px;align-items:center">
+        <select style="font-size:15px;padding:8px" onchange="updDedType(${idx},this.value)">
+          <option value="หักค่าปุ๋ย" ${item.type==='หักค่าปุ๋ย'?'selected':''}>หักค่าปุ๋ย</option>
+          <option value="หักค่าน้ำกรด" ${item.type==='หักค่าน้ำกรด'?'selected':''}>หักค่าน้ำกรด</option>
+          <option value="custom" ${isCustom?'selected':''}>✏️ พิมพ์ระบุเอง...</option>
+        </select>
+        <input type="number" inputmode="decimal" class="yel" style="font-size:16px;padding:8px" value="${item.amt||''}" placeholder="บาท" oninput="updDedAmt(${idx},this.value)">
+        <button type="button" class="br" style="margin:0;padding:8px 0;font-size:14px" onclick="delDedRow(${idx})">✕</button>
+      </div>
+      ${isCustom?`<input type="text" id="dedCust_${idx}" style="margin-top:6px;font-size:15px;padding:8px;background:#fff;border-color:#e53935;color:#b71c1c" value="${item.custom||''}" placeholder="พิมพ์ชื่อรายการ เช่น เบิกล่วงหน้า" oninput="updDedCust(${idx},this.value)">`:''}
+    </div>`;
+  }).join('');
+}
+
+function addDedRow(type='หักค่าปุ๋ย',amt='',custom=''){
+  DED_ITEMS.push({type,amt,custom});
+  renderDedList();
+  if(type==='custom'){
+    setTimeout(()=>$(`dedCust_${DED_ITEMS.length-1}`)?.focus(),50);
+  }
+  calc(1);
+}
+
+function delDedRow(idx){
+  DED_ITEMS.splice(idx,1);
+  renderDedList();
+  calc(1);
+}
+
+function updDedType(idx,val){
+  DED_ITEMS[idx].type=val;
+  renderDedList();
+  if(val==='custom'){
+    setTimeout(()=>$(`dedCust_${idx}`)?.focus(),50);
+  }
+  calc(1);
+}
+
+function updDedCust(idx,val){
+  DED_ITEMS[idx].custom=val;
+}
+
+function updDedAmt(idx,val){
+  DED_ITEMS[idx].amt=Math.max(0,+val||0);
+  calc(1);
+}
+
 function calc(man){
   let i=+$('wSel').value||0;
   let tot=Math.round((+$('wt').value||0)*(+$('prc').value||0)*100)/100;
@@ -963,17 +1022,35 @@ function calc(man){
   if(!man)$('mSav').value="";
   let raw=$('mSav').value.trim();
   let sav=raw===""?autoSav:(+raw||0);
-  let base=getBaseSav(i),net=Math.round((inc-sav)*100)/100,newS=Math.round((base+sav)*100)/100;
-  S={tot,inc,sav,net,newS};
+  let ded=DED_ITEMS.reduce((sum,x)=>sum+(Math.max(0,+x.amt||0)),0);
+  let base=getBaseSav(i);
+  let net=Math.round((inc-sav-ded)*100)/100;
+  let newS=Math.round((base+sav)*100)/100;
+  S={tot,inc,sav,ded,net,newS};
   $('vTot').innerText=tot.toLocaleString()+" บ.";$('vInc').innerText=inc.toLocaleString()+" บ.";
   $('vNet').innerText=net.toLocaleString()+" บ.";$('vOld').innerText=base.toLocaleString();
   $('vNew').innerText=newS.toLocaleString()+" บ.";
 }
+
 function save(){
   if(!+$('wt').value||!+$('prc').value)return showIosAlert("กรุณาใส่ราคาและน้ำหนัก");
   let W=getW(),H=getH(),i=+$('wSel').value,pName=getCurPlot().name;
+
+  // รวบรวมรายการหักทั้งหมดที่มีจำนวนเงิน > 0
+  let cleanDeds=DED_ITEMS.filter(x=>(+x.amt||0)>0).map(x=>({
+    type:x.type,
+    label:x.type==='custom'?(x.custom.trim()||'หักอื่นๆ'):x.type,
+    amt:Math.max(0,+x.amt||0)
+  }));
+  let dAmt=cleanDeds.reduce((s,x)=>s+x.amt,0);
+  let noteTxt=cleanDeds.map(x=>`${x.label}: ${x.amt.toLocaleString()} บ.`).join(' | ');
+
   let rid=editIdx>=0?(H[editIdx].rid||('rec_'+Date.now())):('rec_'+Date.now()+'_'+Math.floor(Math.random()*1000));
-  let rec={rid,wid:W[i].id,wn:W[i].n,d:$('dt').value,pr:+$('prc').value,w:+$('wt').value,t:S.tot,i:S.inc,s:S.sav,p:S.net,nt:editIdx>=0?(H[editIdx].nt||""):""};
+  let rec={
+    rid,wid:W[i].id,wn:W[i].n,d:$('dt').value,pr:+$('prc').value,w:+$('wt').value,
+    t:S.tot,i:S.inc,s:S.sav,p:S.net,
+    dedList:cleanDeds,dedAmt:dAmt,nt:noteTxt
+  };
   if(editIdx>=0){
     let old=H[editIdx],oldW=W.find(w=>w.id===old.wid),rt=editFromTab||4,rd=$('dt').value;
     let diffs=[];
@@ -982,6 +1059,7 @@ function save(){
     if(+old.w!==+rec.w)diffs.push(`นน. ${(+old.w).toLocaleString()} -> ${rec.w.toLocaleString()} กก.`);
     if(+old.pr!==+rec.pr)diffs.push(`ราคา ${old.pr} -> ${rec.pr} บ.`);
     if(+old.s!==+rec.s)diffs.push(`สะสม ${(+old.s).toLocaleString()} -> ${rec.s.toLocaleString()} บาท`);
+    if((+old.dedAmt||0)!==dAmt)diffs.push(`หักอื่นๆ ${(+old.dedAmt||0).toLocaleString()} -> ${dAmt.toLocaleString()} บาท`);
     if(+old.p!==+rec.p)diffs.push(`สุทธิ ${(+old.p).toLocaleString()} -> ${rec.p.toLocaleString()} บาท`);
     let diffTxt=diffs.length?` (${diffs.join(', ')})`:"";
 
@@ -993,11 +1071,15 @@ function save(){
     return;
   }
   W[i].s=S.newS;H.push(rec);
-  addActLog(`📝 [${pName}] จดขายยาง ${fmtThaiDate(rec.d,true)} ของ ${rec.wn} (นน. ${rec.w.toLocaleString()} กก., ราคา ${rec.pr} บ., สะสม ${rec.s.toLocaleString()} บาท, สุทธิ ${rec.p.toLocaleString()} บาท)`);
+  let logExtra=noteTxt?`, ${noteTxt}`:"";
+  addActLog(`📝 [${pName}] จดขายยาง ${fmtThaiDate(rec.d,true)} ของ ${rec.wn} (นน. ${rec.w.toLocaleString()} กก., ราคา ${rec.pr} บ., สะสม ${rec.s.toLocaleString()} บ.${logExtra}, สุทธิ ${rec.p.toLocaleString()} บาท)`);
   saveAllData();
-  showIosAlert(`บันทึกของ ${rec.wn} แล้ว!`,()=>{$('wt').value="";$('mSav').value="";calc(0);});
+  showIosAlert(`บันทึกของ ${rec.wn} แล้ว!`,()=>{
+    $('wt').value="";$('mSav').value="";
+    DED_ITEMS=[];renderDedList();
+    calc(0);
+  });
 }
-
 
 function editLog(idx,fromTab){
   let W=getW(),item=getH()[idx];if(!item)return;
@@ -1007,6 +1089,17 @@ function editLog(idx,fromTab){
   $('wp').value=item.t?Math.round((item.i/item.t)*1000)/10:40;$('sp').value=item.i?Math.round((item.s/item.i)*1000)/10:10;
   let autoS=Math.round(item.i*(+$('sp').value||10))/100;
   $('mSav').value=(+item.s!==autoS)?item.s:"";
+
+  // โหลดรายการหักเก่า (รองรับทั้งแบบใหม่หลายรายการ และแบบเก่า 1 รายการ)
+  if(Array.isArray(item.dedList)&&item.dedList.length){
+    DED_ITEMS=item.dedList.map(x=>({type:x.type||'custom',amt:x.amt,custom:x.type==='custom'?x.label:''}));
+  }else if(+item.dedAmt>0){
+    DED_ITEMS=[{type:item.dedType||'custom',amt:item.dedAmt,custom:item.dedLabel||''}];
+  }else{
+    DED_ITEMS=[];
+  }
+  renderDedList();
+
   $('p1Title').innerText="✏️ แก้ไขรายการขายเก่า";
   $('editBanner').classList.remove('hide');$('btnCancelEdit').classList.remove('hide');
   $('btnSave').innerText="💾 บันทึกการแก้ไขรายการนี้";$('btnSave').className="bo";calc(1);tab(1);
@@ -1014,11 +1107,14 @@ function editLog(idx,fromTab){
 
 function cancelEdit(){
   let wasEdit=editIdx>=0,rt=editFromTab||4,rd=$('dt').value;
-  editIdx=-1;$('wt').value="";$('mSav').value="";$('dt').value=getThaiToday();$('p1Title').innerText="🌳 จดขายขี้ยางก้อน";
+  editIdx=-1;$('wt').value="";$('mSav').value="";
+  DED_ITEMS=[];renderDedList();
+  $('dt').value=getThaiToday();$('p1Title').innerText="🌳 จดขายขี้ยางก้อน";
   $('editBanner').classList.add('hide');$('btnCancelEdit').classList.add('hide');
   $('btnSave').innerText="💾 บันทึกยอดเงินนี้";$('btnSave').className="bg";calc(0);
   if(wasEdit){tab(rt);if(rt===5&&rd)showDayDetail(rd);}
 }
+
 function tab(n){
   curTab=n;if(ls.getItem('rbDirty')!=='1')syncCloud(0);
   [$('p1'),$('p2'),$('p3'),$('p4'),$('p5'),$('p6')].forEach((e,i)=>e.classList.toggle('hide',i+1!=n));
@@ -1172,12 +1268,19 @@ function renderSlipPreview(){
     html+=`<div class="slip-page"><div class="slip-portrait"><div class="slip-card"><div class="slip-hdr">สรุปยอดขายขี้ยางประจำวัน</div><div class="slip-body">${plotHtml}<div class="slip-sub">วันที่ ${fmtThaiDate(d,false)}</div><div class="sum-grid"><div class="sum-box"><span>จำนวนคนงาน</span><b>${wCnt} คน</b></div><div class="sum-box"><span>น้ำหนักรวม</span><b>${totW.toLocaleString()} กก.</b></div><div class="sum-box"><span>ยอดขายก่อนหัก</span><b>${totT.toLocaleString()} บ.</b></div><div class="sum-box"><span>ยอดจ่ายคนงานรวม</span><b>${totP.toLocaleString()} บ.</b></div><div class="sum-box hi" style="grid-column:span 2"><span>คงเหลือหลังจ่ายคนงาน</span><b>${totRem.toLocaleString()} บ.</b></div></div><table class="sum-tbl"><tr><th>ชื่อ</th><th>นน.</th><th>ยอดขาย</th><th>สะสม</th><th>รับสุทธิ</th><th>คงเหลือ</th></tr>`+curSlipItems.map(c=>`<tr><td style="text-align:left"><b>${c.name}</b></td><td>${c.w.toLocaleString()}</td><td>${c.t.toLocaleString()}</td><td>${c.s.toLocaleString()}</td><td><b>${c.p.toLocaleString()}</b></td><td>${(c.t-c.s-c.p).toLocaleString()}</td></tr>`).join('')+`<tr style="background:#fffde7;font-weight:bold"><td style="text-align:left">รวม</td><td>${totW.toLocaleString()}</td><td>${totT.toLocaleString()}</td><td>${totS.toLocaleString()}</td><td>${totP.toLocaleString()}</td><td>${totRem.toLocaleString()}</td></tr></table></div></div></div></div>`;
   }
   let cards=[];
-  curSlipItems.forEach((c,i)=>{
+    curSlipItems.forEach((c,i)=>{
     if($('schk'+i)?.checked){
       let wPct=c.t?Math.round((c.i/c.t)*1000)/10:40,yrBE=Number(c.d.slice(0,4))+543;
-      cards.push(`<div class="slip-card"><div class="slip-hdr">ใบจ่ายเงินขายขี้ยางก้อน</div><div class="slip-body">${plotHtml}<div class="slip-sub">${fmtThaiDate(c.d,false)}</div><div class="slip-name">${c.name}</div><div class="slip-line"><span>น้ำหนัก (กก.)</span><span>${c.w.toLocaleString()}</span></div><div class="slip-line"><span>ราคา (บาท/กก.)</span><span>${fmt2(c.pr)}</span></div><div class="slip-line"><span>ยอดขาย (บาท)</span><span>${fmt2(c.t)}</span></div><div class="slip-line"><span>ส่วนแบ่ง ${wPct}%</span><span>${fmt2(c.i)}</span></div><div class="slip-line"><span>หักสะสม</span><span>${fmt2(c.s)}</span></div><div class="slip-line slip-net"><span>จ่ายสุทธิ (บาท)</span><span>${fmt2(c.p)}</span></div><div class="slip-line" style="margin-top:6px"><span>สะสมปี ${yrBE} ถึงครั้งนี้</span><span>${fmt2(c.cumSav)}</span></div><div class="slip-note">${c.nt||'อื่น ๆ / หมายเหตุ'}</div></div></div>`);
+      let dedLines="";
+      if(Array.isArray(c.dedList)&&c.dedList.length){
+        dedLines=c.dedList.map(d=>`<div class="slip-line" style="color:#c62828"><span>${d.label}</span><span>-${fmt2(d.amt)}</span></div>`).join('');
+      }else if(+c.dedAmt>0){
+        dedLines=`<div class="slip-line" style="color:#c62828"><span>${c.dedLabel||'หักอื่นๆ'}</span><span>-${fmt2(c.dedAmt)}</span></div>`;
+      }
+      cards.push(`<div class="slip-card"><div class="slip-hdr">ใบจ่ายเงินขายขี้ยางก้อน</div><div class="slip-body">${plotHtml}<div class="slip-sub">${fmtThaiDate(c.d,false)}</div><div class="slip-name">${c.name}</div><div class="slip-line"><span>น้ำหนัก (กก.)</span><span>${c.w.toLocaleString()}</span></div><div class="slip-line"><span>ราคา (บาท/กก.)</span><span>${fmt2(c.pr)}</span></div><div class="slip-line"><span>ยอดขาย (บาท)</span><span>${fmt2(c.t)}</span></div><div class="slip-line"><span>ส่วนแบ่ง ${wPct}%</span><span>${fmt2(c.i)}</span></div><div class="slip-line"><span>หักสะสม</span><span>${fmt2(c.s)}</span></div>${dedLines}<div class="slip-line slip-net"><span>จ่ายสุทธิ (บาท)</span><span>${fmt2(c.p)}</span></div><div class="slip-line" style="margin-top:6px"><span>สะสมปี ${yrBE} ถึงครั้งนี้</span><span>${fmt2(c.cumSav)}</span></div><div class="slip-note">${c.nt||'อื่น ๆ / หมายเหตุ'}</div></div></div>`);
     }
   });
+
   for(let i=0;i<cards.length;i+=2)html+=`<div class="slip-page"><div class="slip-pair">${cards[i]}${cards[i+1]||''}</div></div>`;
   $('slipPreview').innerHTML=html||`<p style="color:#c62828;text-align:center">กรุณาติ๊กเลือกอย่างน้อย 1 รายการเพื่อพิมพ์</p>`;
 }
