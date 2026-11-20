@@ -1166,33 +1166,42 @@ function saveW(){
 }
 
 function renderYear(){
-  let y=$('yrSel').value,tc=0,tw=0,tt=0,ts=0,tp=0;
-  let md=Array.from({length:12},()=>({dates:new Set(),w:0,t:0,s:0,p:0}));
+  let y=$('yrSel').value,tc=0,tw=0,tt=0,ts=0,td=0,tp=0;
+  let md=Array.from({length:12},()=>({dates:new Set(),w:0,t:0,s:0,d:0,p:0}));
   getH().forEach(x=>{
     let d=new Date(x.d);
     if(y==='all'||d.getFullYear()==y){
-      let m=d.getMonth();
-      if(!isNaN(m)){md[m].dates.add(x.d);md[m].w+=x.w;md[m].t+=x.t;md[m].s+=x.s;md[m].p+=x.p;tw+=x.w;tt+=x.t;ts+=x.s;tp+=x.p;}
+      let m=d.getMonth(),ded=+x.dedAmt||0;
+      if(!isNaN(m)){
+        md[m].dates.add(x.d);md[m].w+=x.w;md[m].t+=x.t;md[m].s+=x.s;md[m].d+=ded;md[m].p+=x.p;
+        tw+=x.w;tt+=x.t;ts+=x.s;td+=ded;tp+=x.p;
+      }
     }
   });
-  $('yrSum').innerHTML=`<table><tr><th>เดือน</th><th>ครั้ง</th><th>นน.(กก.)</th><th>ยอดขาย</th><th>หักสะสม</th><th>จ่ายคนงาน</th><th>คงเหลือ</th></tr>`+M.map((m,i)=>{let c=md[i].dates.size,r=md[i].t-md[i].s-md[i].p;tc+=c;return`<tr><td style="text-align:center"><b>${m}</b></td><td style="text-align:center">${c||'-'}</td><td>${md[i].w?md[i].w.toLocaleString():'-'}</td><td>${md[i].t?md[i].t.toLocaleString():'-'}</td><td>${md[i].s?md[i].s.toLocaleString():'-'}</td><td>${md[i].p?md[i].p.toLocaleString():'-'}</td><td><b>${md[i].t?r.toLocaleString():'-'}</b></td></tr>`;}).join('')+`<tr style="background:#fffde7;font-weight:bold"><td>รวม</td><td style="text-align:center">${tc}</td><td>${tw.toLocaleString()}</td><td>${tt.toLocaleString()}</td><td>${ts.toLocaleString()}</td><td>${tp.toLocaleString()}</td><td>${(tt-ts-tp).toLocaleString()}</td></tr></table>`;
+  $('yrSum').innerHTML=`<table><tr><th>เดือน</th><th>ครั้ง</th><th>นน.(กก.)</th><th>ยอดขาย</th><th>หักสะสม</th><th>หักอื่นๆ</th><th>จ่ายคนงาน</th><th>คงเหลือ</th></tr>`+M.map((m,i)=>{let c=md[i].dates.size,r=md[i].t-md[i].s-md[i].p;tc+=c;return`<tr><td style="text-align:center"><b>${m}</b></td><td style="text-align:center">${c||'-'}</td><td>${md[i].w?md[i].w.toLocaleString():'-'}</td><td>${md[i].t?md[i].t.toLocaleString():'-'}</td><td>${md[i].s?md[i].s.toLocaleString():'-'}</td><td style="color:#c62828">${md[i].d?md[i].d.toLocaleString():'-'}</td><td>${md[i].p?md[i].p.toLocaleString():'-'}</td><td><b>${md[i].t?r.toLocaleString():'-'}</b></td></tr>`;}).join('')+`<tr style="background:#fffde7;font-weight:bold"><td>รวม</td><td style="text-align:center">${tc}</td><td>${tw.toLocaleString()}</td><td>${tt.toLocaleString()}</td><td>${ts.toLocaleString()}</td><td style="color:#c62828">${td.toLocaleString()}</td><td>${tp.toLocaleString()}</td><td>${(tt-ts-tp).toLocaleString()}</td></tr></table>`;
 }
-let showPersonLogs=false;
+
 function togglePersonLogs(){showPersonLogs=!showPersonLogs;$('pLogBox')?.classList.toggle('hide',!showPersonLogs);if($('btnToggleLogs'))$('btnToggleLogs').innerText=`${showPersonLogs?'🙈 ซ่อน':'👁️ แสดง'}ประวัติ (${$('btnToggleLogs').dataset.cnt||0} ครั้ง)`;}
+
 function renderPerson(){
   let W=getW(),wid=+$('wHistSel').value,y=$('pYrSel').value,wObj=W.find(x=>x.id===wid),logs=[];
-  let md=Array.from({length:12},()=>({cnt:0,w:0,i:0,s:0,p:0})),tc=0,tw=0,ti=0,ts=0,tp=0;
+  let md=Array.from({length:12},()=>({cnt:0,w:0,i:0,s:0,d:0,p:0})),tc=0,tw=0,ti=0,ts=0,td=0,tp=0;
   getH().forEach((x,idx)=>{
     let d=new Date(x.d);
     if(x.wid===wid&&(y==='all'||d.getFullYear()==y)){
-      let m=d.getMonth();
-      if(!isNaN(m)){md[m].cnt++;md[m].w+=x.w;md[m].i+=x.i;md[m].s+=x.s;md[m].p+=x.p;tc++;tw+=x.w;ti+=x.i;ts+=x.s;tp+=x.p;}
-      logs.push({...x,idx});
+      let m=d.getMonth(),ded=+x.dedAmt||0;
+      if(!isNaN(m)){
+        md[m].cnt++;md[m].w+=x.w;md[m].i+=x.i;md[m].s+=x.s;md[m].d+=ded;md[m].p+=x.p;
+        tc++;tw+=x.w;ti+=x.i;ts+=x.s;td+=ded;tp+=x.p;
+      }
+      logs.push({...x,ded,idx});
     }
   });
   let savText=wObj?`${(+wObj.s).toLocaleString()} บ.`:`<span style="color:#c62828">ลบรายชื่อแล้ว (สะสมรวม ${ts.toLocaleString()} บ.)</span>`;
-  $('personSum').innerHTML=`<div class="row" style="margin-top:8px"><span>สะสมคงเหลือ:</span><b style="color:#0d47a1">${savText}</b></div><table><tr><th>เดือน</th><th>ครั้ง</th><th>นน.(กก.)</th><th>รายได้</th><th>หักสะสม</th><th>รับสุทธิ</th></tr>`+M.map((m,i)=>`<tr><td style="text-align:center"><b>${m}</b></td><td style="text-align:center">${md[i].cnt||'-'}</td><td>${md[i].w?md[i].w.toLocaleString():'-'}</td><td>${md[i].i?md[i].i.toLocaleString():'-'}</td><td>${md[i].s?md[i].s.toLocaleString():'-'}</td><td>${md[i].p?md[i].p.toLocaleString():'-'}</td></tr>`).join('')+`<tr style="background:#fffde7;font-weight:bold"><td>รวม</td><td style="text-align:center">${tc}</td><td>${tw.toLocaleString()}</td><td>${ti.toLocaleString()}</td><td>${ts.toLocaleString()}</td><td>${tp.toLocaleString()}</td></tr></table><button type="button" id="btnToggleLogs" data-cnt="${logs.length}" class="bb" style="margin-top:14px" onclick="togglePersonLogs()">${showPersonLogs?'🙈 ซ่อน':'👁️ แสดง'}ประวัติ (${logs.length} ครั้ง)</button><div id="pLogBox" class="${showPersonLogs?'':'hide'}" style="margin-top:8px">`+(logs.length?`<table><tr><th>วันที่</th><th>นน.</th><th>ราคา</th><th>สะสม</th><th>รับสุทธิ</th><th>จัดการ</th></tr>`+logs.slice().reverse().map(l=>`<tr><td style="text-align:center">${fmtThaiDate(l.d,true)}</td><td>${l.w.toLocaleString()}</td><td>${l.pr}</td><td>${l.s.toLocaleString()}</td><td><b>${l.p.toLocaleString()}</b></td><td style="text-align:center;white-space:nowrap"><button type="button" class="act-sm bo" onclick="editLog(${l.idx},4)">แก้</button> <button type="button" class="act-sm br" onclick="delLog(${l.idx},4)">ลบ</button></td></tr>`).join('')+`</table>`:`<p style="color:#666;text-align:center">ไม่มีประวัติในปีที่เลือก</p>`)+`</div>`;
+  $('personSum').innerHTML=`<div class="row" style="margin-top:8px"><span>สะสมคงเหลือ:</span><b style="color:#0d47a1">${savText}</b></div><table><tr><th>เดือน</th><th>ครั้ง</th><th>นน.(กก.)</th><th>รายได้</th><th>หักสะสม</th><th>หักอื่นๆ</th><th>รับสุทธิ</th></tr>`+M.map((m,i)=>`<tr><td style="text-align:center"><b>${m}</b></td><td style="text-align:center">${md[i].cnt||'-'}</td><td>${md[i].w?md[i].w.toLocaleString():'-'}</td><td>${md[i].i?md[i].i.toLocaleString():'-'}</td><td>${md[i].s?md[i].s.toLocaleString():'-'}</td><td style="color:#c62828">${md[i].d?md[i].d.toLocaleString():'-'}</td><td>${md[i].p?md[i].p.toLocaleString():'-'}</td></tr>`).join('')+`<tr style="background:#fffde7;font-weight:bold"><td>รวม</td><td style="text-align:center">${tc}</td><td>${tw.toLocaleString()}</td><td>${ti.toLocaleString()}</td><td>${ts.toLocaleString()}</td><td style="color:#c62828">${td.toLocaleString()}</td><td>${tp.toLocaleString()}</td></tr></table><button type="button" id="btnToggleLogs" data-cnt="${logs.length}" class="bb" style="margin-top:14px" onclick="togglePersonLogs()">${showPersonLogs?'🙈 ซ่อน':'👁️ แสดง'}ประวัติ (${logs.length} ครั้ง)</button><div id="pLogBox" class="${showPersonLogs?'':'hide'}" style="margin-top:8px">`+(logs.length?`<table><tr><th>วันที่</th><th>นน.</th><th>ราคา</th><th>สะสม</th><th>หักอื่นๆ</th><th>รับสุทธิ</th><th>จัดการ</th></tr>`+logs.slice().reverse().map(l=>`<tr><td style="text-align:center">${fmtThaiDate(l.d,true)}</td><td>${l.w.toLocaleString()}</td><td>${l.pr}</td><td>${l.s.toLocaleString()}</td><td style="color:#c62828">${l.ded?l.ded.toLocaleString():'-'}</td><td><b>${l.p.toLocaleString()}</b></td><td style="text-align:center;white-space:nowrap"><button type="button" class="act-sm bo" onclick="editLog(${l.idx},4)">แก้</button> <button type="button" class="act-sm br" onclick="delLog(${l.idx},4)">ลบ</button></td></tr>`).join('')+`</table>`:`<p style="color:#666;text-align:center">ไม่มีประวัติในปีที่เลือก</p>`)+`</div>`;
 }
+
+
 function delLog(idx,fromTab,dateStr){
   let H=getH(),item=H[idx];
   if(!item||!confirm(`ยืนยันการลบรายการ ${fmtThaiDate(item.d,true)}?`))return;
@@ -1260,15 +1269,21 @@ function renderSlipList(){
   renderSlipPreview();
 }
 function toggleAllSlips(f){if($('schkSum'))$('schkSum').checked=f;curSlipItems.forEach((_,i)=>{if($('schk'+i))$('schk'+i).checked=f;});renderSlipPreview();}
+
 function renderSlipPreview(){
   let html="",actCnt=getActivePlots().length,plotHtml=actCnt>1?`<div class="slip-plot">🌳 ${getCurPlot().name}</div>`:'';
   if($('schkSum')?.checked&&curSlipItems.length){
     let d=$('prDateSel').value,wCnt=new Set(curSlipItems.map(x=>x.wid)).size;
-    let totW=curSlipItems.reduce((a,b)=>a+b.w,0),totT=curSlipItems.reduce((a,b)=>a+b.t,0),totS=curSlipItems.reduce((a,b)=>a+b.s,0),totP=curSlipItems.reduce((a,b)=>a+b.p,0),totRem=totT-totS-totP;
-    html+=`<div class="slip-page"><div class="slip-portrait"><div class="slip-card"><div class="slip-hdr">สรุปยอดขายขี้ยางประจำวัน</div><div class="slip-body">${plotHtml}<div class="slip-sub">วันที่ ${fmtThaiDate(d,false)}</div><div class="sum-grid"><div class="sum-box"><span>จำนวนคนงาน</span><b>${wCnt} คน</b></div><div class="sum-box"><span>น้ำหนักรวม</span><b>${totW.toLocaleString()} กก.</b></div><div class="sum-box"><span>ยอดขายก่อนหัก</span><b>${totT.toLocaleString()} บ.</b></div><div class="sum-box"><span>ยอดจ่ายคนงานรวม</span><b>${totP.toLocaleString()} บ.</b></div><div class="sum-box hi" style="grid-column:span 2"><span>คงเหลือหลังจ่ายคนงาน</span><b>${totRem.toLocaleString()} บ.</b></div></div><table class="sum-tbl"><tr><th>ชื่อ</th><th>นน.</th><th>ยอดขาย</th><th>สะสม</th><th>รับสุทธิ</th><th>คงเหลือ</th></tr>`+curSlipItems.map(c=>`<tr><td style="text-align:left"><b>${c.name}</b></td><td>${c.w.toLocaleString()}</td><td>${c.t.toLocaleString()}</td><td>${c.s.toLocaleString()}</td><td><b>${c.p.toLocaleString()}</b></td><td>${(c.t-c.s-c.p).toLocaleString()}</td></tr>`).join('')+`<tr style="background:#fffde7;font-weight:bold"><td style="text-align:left">รวม</td><td>${totW.toLocaleString()}</td><td>${totT.toLocaleString()}</td><td>${totS.toLocaleString()}</td><td>${totP.toLocaleString()}</td><td>${totRem.toLocaleString()}</td></tr></table></div></div></div></div>`;
+    let totW=curSlipItems.reduce((a,b)=>a+b.w,0);
+    let totT=curSlipItems.reduce((a,b)=>a+b.t,0);
+    let totS=curSlipItems.reduce((a,b)=>a+b.s,0);
+    let totD=curSlipItems.reduce((a,b)=>a+(+b.dedAmt||0),0);
+    let totP=curSlipItems.reduce((a,b)=>a+b.p,0);
+    let totRem=totT-totS-totP;
+    html+=`<div class="slip-page"><div class="slip-portrait"><div class="slip-card"><div class="slip-hdr">สรุปยอดขายขี้ยางประจำวัน</div><div class="slip-body">${plotHtml}<div class="slip-sub">วันที่ ${fmtThaiDate(d,false)}</div><div class="sum-grid"><div class="sum-box"><span>จำนวนคนงาน</span><b>${wCnt} คน</b></div><div class="sum-box"><span>น้ำหนักรวม</span><b>${totW.toLocaleString()} กก.</b></div><div class="sum-box"><span>ยอดขายก่อนหัก</span><b>${totT.toLocaleString()} บ.</b></div><div class="sum-box"><span>ยอดจ่ายคนงานรวม</span><b>${totP.toLocaleString()} บ.</b></div><div class="sum-box hi" style="grid-column:span 2"><span>คงเหลือหลังจ่ายคนงาน</span><b>${totRem.toLocaleString()} บ.</b></div></div><table class="sum-tbl"><tr><th>ชื่อ</th><th>นน.</th><th>ยอดขาย</th><th>สะสม</th><th>หักอื่นๆ</th><th>รับสุทธิ</th><th>คงเหลือ</th></tr>`+curSlipItems.map(c=>{let ded=+c.dedAmt||0;return`<tr><td style="text-align:left"><b>${c.name}</b></td><td>${c.w.toLocaleString()}</td><td>${c.t.toLocaleString()}</td><td>${c.s.toLocaleString()}</td><td style="color:#c62828">${ded?ded.toLocaleString():'-'}</td><td><b>${c.p.toLocaleString()}</b></td><td>${(c.t-c.s-c.p).toLocaleString()}</td></tr>`;}).join('')+`<tr style="background:#fffde7;font-weight:bold"><td style="text-align:left">รวม</td><td>${totW.toLocaleString()}</td><td>${totT.toLocaleString()}</td><td>${totS.toLocaleString()}</td><td style="color:#c62828">${totD?totD.toLocaleString():'-'}</td><td>${totP.toLocaleString()}</td><td>${totRem.toLocaleString()}</td></tr></table></div></div></div></div>`;
   }
   let cards=[];
-    curSlipItems.forEach((c,i)=>{
+  curSlipItems.forEach((c,i)=>{
     if($('schk'+i)?.checked){
       let wPct=c.t?Math.round((c.i/c.t)*1000)/10:40,yrBE=Number(c.d.slice(0,4))+543;
       let dedLines="";
@@ -1280,10 +1295,11 @@ function renderSlipPreview(){
       cards.push(`<div class="slip-card"><div class="slip-hdr">ใบจ่ายเงินขายขี้ยางก้อน</div><div class="slip-body">${plotHtml}<div class="slip-sub">${fmtThaiDate(c.d,false)}</div><div class="slip-name">${c.name}</div><div class="slip-line"><span>น้ำหนัก (กก.)</span><span>${c.w.toLocaleString()}</span></div><div class="slip-line"><span>ราคา (บาท/กก.)</span><span>${fmt2(c.pr)}</span></div><div class="slip-line"><span>ยอดขาย (บาท)</span><span>${fmt2(c.t)}</span></div><div class="slip-line"><span>ส่วนแบ่ง ${wPct}%</span><span>${fmt2(c.i)}</span></div><div class="slip-line"><span>หักสะสม</span><span>${fmt2(c.s)}</span></div>${dedLines}<div class="slip-line slip-net"><span>จ่ายสุทธิ (บาท)</span><span>${fmt2(c.p)}</span></div><div class="slip-line" style="margin-top:6px"><span>สะสมปี ${yrBE} ถึงครั้งนี้</span><span>${fmt2(c.cumSav)}</span></div><div class="slip-note">${c.nt||'อื่น ๆ / หมายเหตุ'}</div></div></div>`);
     }
   });
-
   for(let i=0;i<cards.length;i+=2)html+=`<div class="slip-page"><div class="slip-pair">${cards[i]}${cards[i+1]||''}</div></div>`;
   $('slipPreview').innerHTML=html||`<p style="color:#c62828;text-align:center">กรุณาติ๊กเลือกอย่างน้อย 1 รายการเพื่อพิมพ์</p>`;
 }
+
+
 async function toggleAdminPanel(){
   if(!$('adminPanel').classList.contains('hide'))return closeAdminPanel();
   let pwd=prompt("🔐 ใส่รหัสผ่านแอดมิน:");if(pwd===null)return;
