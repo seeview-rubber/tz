@@ -1181,7 +1181,12 @@ function renderYear(){
   $('yrSum').innerHTML=`<table><tr><th>เดือน</th><th>ครั้ง</th><th>นน.(กก.)</th><th>ยอดขาย</th><th>หักสะสม</th><th>หักอื่นๆ</th><th>จ่ายคนงาน</th><th>คงเหลือ</th></tr>`+M.map((m,i)=>{let c=md[i].dates.size,r=md[i].t-md[i].s-md[i].p;tc+=c;return`<tr><td style="text-align:center"><b>${m}</b></td><td style="text-align:center">${c||'-'}</td><td>${md[i].w?md[i].w.toLocaleString():'-'}</td><td>${md[i].t?md[i].t.toLocaleString():'-'}</td><td>${md[i].s?md[i].s.toLocaleString():'-'}</td><td style="color:#c62828">${md[i].d?md[i].d.toLocaleString():'-'}</td><td>${md[i].p?md[i].p.toLocaleString():'-'}</td><td><b>${md[i].t?r.toLocaleString():'-'}</b></td></tr>`;}).join('')+`<tr style="background:#fffde7;font-weight:bold"><td>รวม</td><td style="text-align:center">${tc}</td><td>${tw.toLocaleString()}</td><td>${tt.toLocaleString()}</td><td>${ts.toLocaleString()}</td><td style="color:#c62828">${td.toLocaleString()}</td><td>${tp.toLocaleString()}</td><td>${(tt-ts-tp).toLocaleString()}</td></tr></table>`;
 }
 
-function togglePersonLogs(){showPersonLogs=!showPersonLogs;$('pLogBox')?.classList.toggle('hide',!showPersonLogs);if($('btnToggleLogs'))$('btnToggleLogs').innerText=`${showPersonLogs?'🙈 ซ่อน':'👁️ แสดง'}ประวัติ (${$('btnToggleLogs').dataset.cnt||0} ครั้ง)`;}
+let showPersonLogs=false;
+function togglePersonLogs(){
+  showPersonLogs=!showPersonLogs;
+  $('pLogBox')?.classList.toggle('hide',!showPersonLogs);
+  if($('btnToggleLogs'))$('btnToggleLogs').innerText=`${showPersonLogs?'🙈 ซ่อน':'👁️ แสดง'}ประวัติ (${$('btnToggleLogs').dataset.cnt||0} ครั้ง)`;
+}
 
 function renderPerson(){
   let W=getW(),wid=+$('wHistSel').value,y=$('pYrSel').value,wObj=W.find(x=>x.id===wid),logs=[];
