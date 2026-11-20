@@ -281,6 +281,22 @@ th{background:#e8f5e9;text-align:center}
 <div id="slipPreview"></div>
 </div>
 </div>
+// ป้องกันการพิมพ์เครื่องหมายติดลบและสัญลักษณ์ในช่องตัวเลขทุกช่อง
+document.addEventListener('keydown', e => {
+  if (e.target.type === 'number' && ['-', '+', 'e', 'E'].includes(e.key)) {
+    e.preventDefault();
+  }
+});
+
+document.addEventListener('input', e => {
+  if (e.target.type === 'number') {
+    let val = String(e.target.value);
+    if (val.includes('-') || val.includes('+')) {
+      e.target.value = val.replace(/[-+]/g, '');
+    }
+  }
+});
+
 <script>
 const $=id=>document.getElementById(id);
 let iosAlertCb=null;
