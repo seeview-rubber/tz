@@ -1207,20 +1207,24 @@ function renderPerson(){
   $('personSum').innerHTML=`<div class="row" style="margin-top:8px"><span>สะสมคงเหลือ:</span><b style="color:#0d47a1">${savText}</b></div><table><tr><th>เดือน</th><th>ครั้ง</th><th>นน.(กก.)</th><th>รายได้</th><th>หักสะสม</th><th>หักอื่นๆ</th><th>รับสุทธิ</th></tr>`+M.map((m,i)=>`<tr><td style="text-align:center"><b>${m}</b></td><td style="text-align:center">${md[i].cnt||'-'}</td><td>${md[i].w?md[i].w.toLocaleString():'-'}</td><td>${md[i].i?md[i].i.toLocaleString():'-'}</td><td>${md[i].s?md[i].s.toLocaleString():'-'}</td><td style="color:#c62828">${md[i].d?md[i].d.toLocaleString():'-'}</td><td>${md[i].p?md[i].p.toLocaleString():'-'}</td></tr>`).join('')+`<tr style="background:#fffde7;font-weight:bold"><td>รวม</td><td style="text-align:center">${tc}</td><td>${tw.toLocaleString()}</td><td>${ti.toLocaleString()}</td><td>${ts.toLocaleString()}</td><td style="color:#c62828">${td.toLocaleString()}</td><td>${tp.toLocaleString()}</td></tr></table><button type="button" id="btnToggleLogs" data-cnt="${logs.length}" class="bb" style="margin-top:14px" onclick="togglePersonLogs()">${showPersonLogs?'🙈 ซ่อน':'👁️ แสดง'}ประวัติ (${logs.length} ครั้ง)</button><div id="pLogBox" class="${showPersonLogs?'':'hide'}" style="margin-top:8px">`+(logs.length?`<table><tr><th>วันที่</th><th>นน.</th><th>ราคา</th><th>สะสม</th><th>หักอื่นๆ</th><th>รับสุทธิ</th><th>จัดการ</th></tr>`+logs.slice().reverse().map(l=>`<tr><td style="text-align:center">${fmtThaiDate(l.d,true)}</td><td>${l.w.toLocaleString()}</td><td>${l.pr}</td><td>${l.s.toLocaleString()}</td><td style="color:#c62828">${l.ded?l.ded.toLocaleString():'-'}</td><td><b>${l.p.toLocaleString()}</b></td><td style="text-align:center;white-space:nowrap"><button type="button" class="act-sm bo" onclick="editLog(${l.idx},4)">แก้</button> <button type="button" class="act-sm br" onclick="delLog(${l.idx},4)">ลบ</button></td></tr>`).join('')+`</table>`:`<p style="color:#666;text-align:center">ไม่มีประวัติในปีที่เลือก</p>`)+`</div>`;
 }
 
-
 function delLog(idx,fromTab,dateStr){
   let H=getH(),item=H[idx];
   if(!item||!confirm(`ยืนยันการลบรายการ ${fmtThaiDate(item.d,true)}?`))return;
   let wObj=getW().find(w=>w.id===item.wid);
   if(wObj){wObj.s=Math.max(0,(+wObj.s||0)-item.s);markEditRid('w_'+wObj.id);}
   if(item.rid)markDelRid(item.rid);
-  addActLog(`🗑️ [${getCurPlot().name}] ลบรายการ ${fmtThaiDate(item.d,true)} ของ ${item.wn}`);
+
+  // สร้างข้อความรายละเอียดรายการที่ลบ
+  let delExtra = item.nt ? `, ${item.nt}` : ((+item.dedAmt > 0) ? `, หักอื่นๆ ${(+item.dedAmt).toLocaleString()} บ.` : "");
+  let delDetail = `(นน. ${(+item.w).toLocaleString()} กก., ราคา ${item.pr} บ., สะสม ${(+item.s).toLocaleString()} บ.${delExtra}, สุทธิ ${(+item.p).toLocaleString()} บาท)`;
+  addActLog(`🗑️ [${getCurPlot().name}] ลบรายการ ${fmtThaiDate(item.d,true)} ของ ${item.wn} ${delDetail}`);
 
   H.splice(idx,1);saveAllData();calc(0);
   if(fromTab===5){renderDaily();if(dateStr&&H.some(x=>x.d===dateStr))showDayDetail(dateStr);}
   else renderPerson();
   alert("ลบรายการเรียบร้อยแล้ว");
 }
+
 function saveSlipPdf(){
   if(!$('slipPreview').querySelector('.slip-page'))return alert("กรุณาติ๊กเลือกอย่างน้อย 1 รายการครับ");
   $('printFrame')?.remove();
