@@ -107,10 +107,6 @@ th{background:#e8f5e9;text-align:center}
   .slip-portrait .sum-tbl th,.slip-portrait .sum-tbl td{padding:7px 5px}
   .slip-card{width:100%;height:100%}
 }
-body.wide-mode .box{max-width:860px;padding:18px}
-body.wide-mode table{font-size:15px}
-body.wide-mode th,body.wide-mode td{padding:8px 6px}
-
 </style>
 </head>
 <body>
@@ -132,7 +128,6 @@ body.wide-mode th,body.wide-mode td{padding:8px 6px}
 <div class="box no-print" style="padding:8px">
 <div class="top-bar">
 <div id="syncStatus" class="sync-bar">⏳ กำลังเชื่อมต่อฐานข้อมูลออนไลน์...</div>
-<button type="button" id="btnViewMode" class="lock-btn" style="background:#1565c0" onclick="toggleViewMode()">↔️ เต็มจอ</button>
 <button type="button" class="lock-btn" onclick="lockApp()">🔒 ล็อก</button>
 </div>
 <div id="plotBar" class="plot-bar hide">
@@ -619,18 +614,6 @@ function lockApp(){
   $('appMain').classList.add('hide');$('loginBox').classList.remove('hide');
   updatePinLockUI();
 }
-function applyViewMode(){
-  let isWide=ls.getItem('rbViewWide')==='1';
-  document.body.classList.toggle('wide-mode',isWide);
-  if($('btnViewMode'))$('btnViewMode').innerText=isWide?'📱 กะทัดรัด':'↔️ เต็มจอ';
-}
-function toggleViewMode(){
-  let next=ls.getItem('rbViewWide')!=='1';
-  ls.setItem('rbViewWide',next?'1':'0');
-  applyViewMode();
-}
-applyViewMode();
-
 function normPlots(arr){
   return arr.map((p,idx)=>({
     id:p.id||('plot_'+(idx+1)),
