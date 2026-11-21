@@ -52,8 +52,8 @@ th{background:#e8f5e9;text-align:center}
 .pin-inp{text-align:center;font-size:26px;letter-spacing:6px;margin:14px 0}
 .chk-row{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid #ccc;border-radius:8px;margin-bottom:8px;background:#fafafa;cursor:pointer}
 .chk-row input{width:22px;height:22px;margin:0;-webkit-appearance:checkbox;appearance:checkbox;flex-shrink:0}
-.slip-page{display:flex;justify-content:center;margin-bottom:18px}
-.slip-single,.slip-portrait{display:block;width:100%;max-width:440px;margin:0 auto;overflow-x:auto}
+.slip-pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;margin-bottom:18px}
+.slip-portrait{display:block;margin-bottom:18px;overflow-x:auto;max-width:100%}
 @media(max-width:520px){.slip-pair{grid-template-columns:1fr}}
 .slip-card{border:1px solid #bbb;background:#fff;color:#111;font-size:15px;display:flex;flex-direction:column}
 .slip-hdr{background:#1b4d2e;color:#fff;text-align:center;font-size:20px;font-weight:bold;padding:12px 8px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -88,30 +88,25 @@ th{background:#e8f5e9;text-align:center}
 .ios-alert-msg{padding:24px 18px 22px;color:#ffffff;font-size:18px;font-weight:bold;line-height:1.4;white-space:pre-line}
 .ios-alert-btn{width:100%;margin:0;padding:13px 10px;background:transparent;border:0;border-top:1px solid rgba(255,255,255,0.16);border-radius:0;color:#3b82f6;font-size:18px;font-weight:bold;cursor:pointer}
 .ios-alert-btn:active{background:rgba(255,255,255,0.1)}
-@page{size:A5 portrait;margin:0}
+@page{size:A4 portrait;margin:0}
 @media print{
-  html,body{width:148mm;max-width:none;overflow:visible;background:#fff!important;margin:0!important;padding:0!important}
+  html,body{width:210mm;max-width:none;overflow:visible;background:#fff!important;margin:0!important;padding:0!important}
   .no-print,.ios-alert-overlay{display:none!important}
-  #appMain,#p6{display:block!important;max-width:none!important;width:148mm!important;margin:0!important;padding:0!important;box-shadow:none!important;border-radius:0!important;background:#fff!important}
-  .slip-page{width:148mm;height:208mm;padding:5mm;display:flex!important;align-items:stretch;justify-content:center;page-break-after:always;break-after:page;overflow:hidden;box-sizing:border-box}
+  #appMain,#p6{display:block!important;max-width:none!important;width:210mm!important;margin:0!important;padding:0!important;box-shadow:none!important;border-radius:0!important;background:#fff!important}
+  .slip-page{width:210mm;height:274mm;padding:6mm;display:flex!important;align-items:center;justify-content:center;page-break-after:always;break-after:page;overflow:hidden;box-sizing:border-box}
   .slip-page:last-child{page-break-after:auto;break-after:auto}
-  .slip-single,.slip-portrait{display:block!important;width:100%;height:100%;margin:0;overflow:visible}
-  .slip-card{width:100%;height:100%;box-sizing:border-box}
-  .slip-hdr{font-size:18px;padding:10px 8px}
-  .slip-body{padding:12px 14px}
-  .slip-sub{font-size:14px;margin-bottom:8px}
-  .slip-name{font-size:19px;margin-bottom:10px}
-  .slip-line{padding:4px 0;font-size:14px}
-  .slip-net{font-size:16px;padding-top:6px}
-  .slip-note{min-height:80px;margin-top:10px;font-size:13px}
-  .sum-grid{gap:6px;margin-bottom:8px}
-  .sum-box{padding:6px 8px}
-  .sum-box span{font-size:11px}
-  .sum-box b{font-size:15px}
-  .sum-tbl{font-size:11px}
-  .sum-tbl th,.sum-tbl td{padding:4px 3px}
+  .slip-pair{display:grid!important;grid-template-columns:1fr 1fr!important;gap:10mm;width:260mm;height:186mm;flex-shrink:0;margin:0;transform:rotate(90deg);transform-origin:center center}
+  .slip-portrait{display:block!important;width:194mm;height:260mm;margin:0;overflow:visible}
+  .slip-portrait .slip-hdr{font-size:22px;padding:12px}
+  .slip-portrait .slip-sub{font-size:16px;margin-bottom:10px}
+  .slip-portrait .sum-grid{gap:10px;margin-bottom:12px}
+  .slip-portrait .sum-box{padding:9px 12px}
+  .slip-portrait .sum-box span{font-size:13px}
+  .slip-portrait .sum-box b{font-size:19px}
+  .slip-portrait .sum-tbl{font-size:13px}
+  .slip-portrait .sum-tbl th,.slip-portrait .sum-tbl td{padding:7px 5px}
+  .slip-card{width:100%;height:100%}
 }
-
 </style>
 </head>
 <body>
@@ -982,7 +977,6 @@ function renderDedList(){
         <select style="font-size:15px;padding:8px" onchange="updDedType(${idx},this.value)">
           <option value="หักค่าปุ๋ย" ${item.type==='หักค่าปุ๋ย'?'selected':''}>หักค่าปุ๋ย</option>
           <option value="หักค่าน้ำกรด" ${item.type==='หักค่าน้ำกรด'?'selected':''}>หักค่าน้ำกรด</option>
-          <option value="เบิกเงิน" ${item.type==='เบิกเงิน'?'selected':''}>เบิกเงิน</option>
           <option value="custom" ${isCustom?'selected':''}>✏️ พิมพ์ระบุเอง...</option>
         </select>
         <input type="number" inputmode="decimal" class="yel" style="font-size:16px;padding:8px" value="${item.amt||''}" placeholder="บาท" oninput="updDedAmt(${idx},this.value)">
@@ -992,7 +986,6 @@ function renderDedList(){
     </div>`;
   }).join('');
 }
-
 
 function addDedRow(type='หักค่าปุ๋ย',amt='',custom=''){
   DED_ITEMS.push({type,amt,custom});
@@ -1246,12 +1239,10 @@ function saveSlipPdf(){
   document.body.appendChild(f);
   let doc=f.contentWindow.document,st=document.querySelector('style').innerHTML;
   doc.open();
-  doc.write(`<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><style>${st}@page{size:A5 portrait;margin:0}@media print{html,body{width:148mm;margin:0!important;padding:0!important;background:#fff!important}.slip-page{width:148mm;height:208mm;padding:5mm;display:flex!important;align-items:stretch;justify-content:center;page-break-after:always;break-after:page;overflow:hidden;box-sizing:border-box}.slip-page:last-child{page-break-after:auto;break-after:auto}}</style></head><body>${$('slipPreview').innerHTML}</body></html>`);
+  doc.write(`<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><style>${st}@page{size:A4 portrait;margin:0}@media print{html,body{width:210mm;margin:0!important;padding:0!important;background:#fff!important}.slip-page{width:210mm;height:274mm;padding:6mm;display:flex!important;align-items:center;justify-content:center;page-break-after:always;break-after:page;overflow:hidden;box-sizing:border-box}.slip-page:last-child{page-break-after:auto;break-after:auto}}</style></head><body>${$('slipPreview').innerHTML}</body></html>`);
   doc.close();
   setTimeout(()=>{f.contentWindow.focus();f.contentWindow.print();},200);
 }
-
-
 function renderDaily(){
   let y=$('dYrSel').value,m=$('dMoSel').value,dm=new Map(),tw=0,tt=0;$('dailyDetail').innerHTML="";
   getH().forEach(x=>{
@@ -1308,6 +1299,7 @@ function renderSlipPreview(){
     let totRem=totT-totS-totP;
     html+=`<div class="slip-page"><div class="slip-portrait"><div class="slip-card"><div class="slip-hdr">สรุปยอดขายขี้ยางประจำวัน</div><div class="slip-body">${plotHtml}<div class="slip-sub">วันที่ ${fmtThaiDate(d,false)}</div><div class="sum-grid"><div class="sum-box"><span>จำนวนคนงาน</span><b>${wCnt} คน</b></div><div class="sum-box"><span>น้ำหนักรวม</span><b>${totW.toLocaleString()} กก.</b></div><div class="sum-box"><span>ยอดขายก่อนหัก</span><b>${totT.toLocaleString()} บ.</b></div><div class="sum-box"><span>ยอดจ่ายคนงานรวม</span><b>${totP.toLocaleString()} บ.</b></div><div class="sum-box hi" style="grid-column:span 2"><span>คงเหลือหลังจ่ายคนงาน</span><b>${totRem.toLocaleString()} บ.</b></div></div><table class="sum-tbl"><tr><th>ชื่อ</th><th>นน.</th><th>ยอดขาย</th><th>สะสม</th><th>หักอื่นๆ</th><th>รับสุทธิ</th><th>คงเหลือ</th></tr>`+curSlipItems.map(c=>{let ded=+c.dedAmt||0;return`<tr><td style="text-align:left"><b>${c.name}</b></td><td>${c.w.toLocaleString()}</td><td>${c.t.toLocaleString()}</td><td>${c.s.toLocaleString()}</td><td style="color:#c62828">${ded?ded.toLocaleString():'-'}</td><td><b>${c.p.toLocaleString()}</b></td><td>${(c.t-c.s-c.p).toLocaleString()}</td></tr>`;}).join('')+`<tr style="background:#fffde7;font-weight:bold"><td style="text-align:left">รวม</td><td>${totW.toLocaleString()}</td><td>${totT.toLocaleString()}</td><td>${totS.toLocaleString()}</td><td style="color:#c62828">${totD?totD.toLocaleString():'-'}</td><td>${totP.toLocaleString()}</td><td>${totRem.toLocaleString()}</td></tr></table></div></div></div></div>`;
   }
+  let cards=[];
   curSlipItems.forEach((c,i)=>{
     if($('schk'+i)?.checked){
       let wPct=c.t?Math.round((c.i/c.t)*1000)/10:40,yrBE=Number(c.d.slice(0,4))+543;
@@ -1317,10 +1309,10 @@ function renderSlipPreview(){
       }else if(+c.dedAmt>0){
         dedLines=`<div class="slip-line" style="color:#c62828"><span>${c.dedLabel||'หักอื่นๆ'}</span><span>-${fmt2(c.dedAmt)}</span></div>`;
       }
-      let cardHtml=`<div class="slip-card"><div class="slip-hdr">ใบจ่ายเงินขายขี้ยางก้อน</div><div class="slip-body">${plotHtml}<div class="slip-sub">${fmtThaiDate(c.d,false)}</div><div class="slip-name">${c.name}</div><div class="slip-line"><span>น้ำหนัก (กก.)</span><span>${c.w.toLocaleString()}</span></div><div class="slip-line"><span>ราคา (บาท/กก.)</span><span>${fmt2(c.pr)}</span></div><div class="slip-line"><span>ยอดขาย (บาท)</span><span>${fmt2(c.t)}</span></div><div class="slip-line"><span>ส่วนแบ่ง ${wPct}%</span><span>${fmt2(c.i)}</span></div><div class="slip-line"><span>หักสะสม</span><span>${fmt2(c.s)}</span></div>${dedLines}<div class="slip-line slip-net"><span>จ่ายสุทธิ (บาท)</span><span>${fmt2(c.p)}</span></div><div class="slip-line" style="margin-top:6px"><span>สะสมปี ${yrBE} ถึงครั้งนี้</span><span>${fmt2(c.cumSav)}</span></div><div class="slip-note">${c.nt||'อื่น ๆ / หมายเหตุ'}</div></div></div>`;
-      html+=`<div class="slip-page"><div class="slip-single">${cardHtml}</div></div>`;
+      cards.push(`<div class="slip-card"><div class="slip-hdr">ใบจ่ายเงินขายขี้ยางก้อน</div><div class="slip-body">${plotHtml}<div class="slip-sub">${fmtThaiDate(c.d,false)}</div><div class="slip-name">${c.name}</div><div class="slip-line"><span>น้ำหนัก (กก.)</span><span>${c.w.toLocaleString()}</span></div><div class="slip-line"><span>ราคา (บาท/กก.)</span><span>${fmt2(c.pr)}</span></div><div class="slip-line"><span>ยอดขาย (บาท)</span><span>${fmt2(c.t)}</span></div><div class="slip-line"><span>ส่วนแบ่ง ${wPct}%</span><span>${fmt2(c.i)}</span></div><div class="slip-line"><span>หักสะสม</span><span>${fmt2(c.s)}</span></div>${dedLines}<div class="slip-line slip-net"><span>จ่ายสุทธิ (บาท)</span><span>${fmt2(c.p)}</span></div><div class="slip-line" style="margin-top:6px"><span>สะสมปี ${yrBE} ถึงครั้งนี้</span><span>${fmt2(c.cumSav)}</span></div><div class="slip-note">${c.nt||'อื่น ๆ / หมายเหตุ'}</div></div></div>`);
     }
   });
+  for(let i=0;i<cards.length;i+=2)html+=`<div class="slip-page"><div class="slip-pair">${cards[i]}${cards[i+1]||''}</div></div>`;
   $('slipPreview').innerHTML=html||`<p style="color:#c62828;text-align:center">กรุณาติ๊กเลือกอย่างน้อย 1 รายการเพื่อพิมพ์</p>`;
 }
 
