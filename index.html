@@ -1313,7 +1313,7 @@ function renderSlipPreview(){
     let totP=curSlipItems.reduce((a,b)=>a+b.p,0);
     let totRem=totT-totS-totP;
 
-    const FIRST_MAX=14, NEXT_MAX=22;
+    const FIRST_MAX=10, NEXT_MAX=15;
     let chunks=[];
     if(curSlipItems.length<=FIRST_MAX){
       chunks.push(curSlipItems);
