@@ -1302,7 +1302,57 @@ function renderSlipList(){
 }
 function toggleAllSlips(f){if($('schkSum'))$('schkSum').checked=f;curSlipItems.forEach((_,i)=>{if($('schk'+i))$('schk'+i).checked=f;});renderSlipPreview();}
 
+function renderSlipPreview(){
+  let html="",actCnt=getActivePlots().length,plotHtml=actCnt>1?`<div class="slip-plot">🌳 ${getCurPlot().name}</div>`:'';
+  if($('schkSum')?.checked&&curSlipItems.length){
+    let d=$('prDateSel').value,wCnt=new Set(curSlipItems.map(x=>x.wid)).size;
+    let totW=curSlipItems.reduce((a,b)=>a+b.w,0);
+    let totT=curSlipItems.reduce((a,b)=>a+b.t,0);
+    let totS=curSlipItems.reduce((a,b)=>a+b.s,0);
+    let totD=curSlipItems.reduce((a,b)=>a+(+b.dedAmt||0),0);
+    let totP=curSlipItems.reduce((a,b)=>a+b.p,0);
+    let totRem=totT-totS-totP;
 
+    const FIRST_MAX=14, NEXT_MAX=22;
+    let chunks=[];
+    if(curSlipItems.length<=FIRST_MAX){
+      chunks.push(curSlipItems);
+    }else{
+      chunks.push(curSlipItems.slice(0,FIRST_MAX));
+      for(let i=FIRST_MAX;i<curSlipItems.length;i+=NEXT_MAX){
+        chunks.push(curSlipItems.slice(i,i+NEXT_MAX));
+      }
+    }
+
+    let tblHdr=`<tr><th>ชื่อ</th><th>นน.</th><th>ยอดขาย</th><th>สะสม</th><th>หักอื่นๆ</th><th>รับสุทธิ</th><th>คงเหลือ</th></tr>`;
+    let totalRow=`<tr style="background:#fffde7;font-weight:bold"><td style="text-align:left">รวม</td><td>${totW.toLocaleString()}</td><td>${totT.toLocaleString()}</td><td>${totS.toLocaleString()}</td><td style="color:#c62828">${totD?totD.toLocaleString():'-'}</td><td>${totP.toLocaleString()}</td><td>${totRem.toLocaleString()}</td></tr>`;
+    let summaryBoxes=`<div class="sum-grid"><div class="sum-box"><span>จำนวนคนงาน</span><b>${wCnt} คน</b></div><div class="sum-box"><span>น้ำหนักรวม</span><b>${totW.toLocaleString()} กก.</b></div><div class="sum-box"><span>ยอดขายก่อนหัก</span><b>${totT.toLocaleString()} บ.</b></div><div class="sum-box"><span>ยอดจ่ายคนงานรวม</span><b>${totP.toLocaleString()} บ.</b></div><div class="sum-box hi" style="grid-column:span 2"><span>คงเหลือหลังจ่ายคนงาน</span><b>${totRem.toLocaleString()} บ.</b></div></div>`;
+
+    chunks.forEach((chunk,pIdx)=>{
+      let isFirst=pIdx===0, isLast=pIdx===chunks.length-1;
+      let pageTag=chunks.length>1?` (หน้า ${pIdx+1}/${chunks.length})`:'';
+      let rowsHtml=chunk.map(c=>{
+        let ded=+c.dedAmt||0;
+        return`<tr><td style="text-align:left"><b>${c.name}</b></td><td>${c.w.toLocaleString()}</td><td>${c.t.toLocaleString()}</td><td>${c.s.toLocaleString()}</td><td style="color:#c62828">${ded?ded.toLocaleString():'-'}</td><td><b>${c.p.toLocaleString()}</b></td><td>${(c.t-c.s-c.p).toLocaleString()}</td></tr>`;
+      }).join('');
+      html+=`<div class="slip-page"><div class="slip-portrait"><div class="slip-card"><div class="slip-hdr">สรุปยอดขายขี้ยางประจำวัน${pageTag}</div><div class="slip-body">${plotHtml}<div class="slip-sub">วันที่ ${fmtThaiDate(d,false)}</div>${isFirst?summaryBoxes:''}<table class="sum-tbl">${tblHdr}${rowsHtml}${isLast?totalRow:''}</table></div></div></div></div>`;
+    });
+  }
+  curSlipItems.forEach((c,i)=>{
+    if($('schk'+i)?.checked){
+      let wPct=c.t?Math.round((c.i/c.t)*1000)/10:40,yrBE=Number(c.d.slice(0,4))+543;
+      let dedLines="";
+      if(Array.isArray(c.dedList)&&c.dedList.length){
+        dedLines=c.dedList.map(d=>`<div class="slip-line" style="color:#c62828"><span>${d.label}</span><span>-${fmt2(d.amt)}</span></div>`).join('');
+      }else if(+c.dedAmt>0){
+        dedLines=`<div class="slip-line" style="color:#c62828"><span>${c.dedLabel||'หักอื่นๆ'}</span><span>-${fmt2(c.dedAmt)}</span></div>`;
+      }
+      let card=`<div class="slip-card"><div class="slip-hdr">ใบจ่ายเงินขายขี้ยางก้อน</div><div class="slip-body">${plotHtml}<div class="slip-sub">${fmtThaiDate(c.d,false)}</div><div class="slip-name">${c.name}</div><div class="slip-line"><span>น้ำหนัก (กก.)</span><span>${c.w.toLocaleString()}</span></div><div class="slip-line"><span>ราคา (บาท/กก.)</span><span>${fmt2(c.pr)}</span></div><div class="slip-line"><span>ยอดขาย (บาท)</span><span>${fmt2(c.t)}</span></div><div class="slip-line"><span>ส่วนแบ่ง ${wPct}%</span><span>${fmt2(c.i)}</span></div><div class="slip-line"><span>หักสะสม</span><span>${fmt2(c.s)}</span></div>${dedLines}<div class="slip-line slip-net"><span>จ่ายสุทธิ (บาท)</span><span>${fmt2(c.p)}</span></div><div class="slip-line" style="margin-top:6px"><span>สะสมปี ${yrBE} ถึงครั้งนี้</span><span>${fmt2(c.cumSav)}</span></div><div class="slip-note">${c.nt||'อื่น ๆ / หมายเหตุ'}</div></div></div>`;
+      html+=`<div class="slip-page"><div class="slip-portrait">${card}</div></div>`;
+    }
+  });
+  $('slipPreview').innerHTML=html||`<p style="color:#c62828;text-align:center">กรุณาติ๊กเลือกอย่างน้อย 1 รายการเพื่อพิมพ์</p>`;
+}
 
 async function toggleAdminPanel(){
   if(!$('adminPanel').classList.contains('hide'))return closeAdminPanel();
