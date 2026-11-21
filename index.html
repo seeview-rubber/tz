@@ -1313,7 +1313,7 @@ function renderSlipPreview(){
     let totP=curSlipItems.reduce((a,b)=>a+b.p,0);
     let totRem=totT-totS-totP;
 
-    const FIRST_MAX=10, NEXT_MAX=15;
+    const FIRST_MAX=12, NEXT_MAX=18;
     let chunks=[];
     if(curSlipItems.length<=FIRST_MAX){
       chunks.push(curSlipItems);
@@ -1340,19 +1340,22 @@ function renderSlipPreview(){
   }
   curSlipItems.forEach((c,i)=>{
     if($('schk'+i)?.checked){
-      let wPct=c.t?Math.round((c.i/c.t)*1000)/10:40,yrBE=Number(c.d.slice(0,4))+543;
+      let wPct=c.t?Math.round((c.i/c.t)*1000)/10:40;
+      let sPct=c.i?Math.round((c.s/c.i)*1000)/10:0;
+      let yrBE=Number(c.d.slice(0,4))+543;
       let dedLines="";
       if(Array.isArray(c.dedList)&&c.dedList.length){
         dedLines=c.dedList.map(d=>`<div class="slip-line" style="color:#c62828"><span>${d.label}</span><span>-${fmt2(d.amt)}</span></div>`).join('');
       }else if(+c.dedAmt>0){
         dedLines=`<div class="slip-line" style="color:#c62828"><span>${c.dedLabel||'หักอื่นๆ'}</span><span>-${fmt2(c.dedAmt)}</span></div>`;
       }
-      let card=`<div class="slip-card"><div class="slip-hdr">ใบจ่ายเงินขายขี้ยางก้อน</div><div class="slip-body">${plotHtml}<div class="slip-sub">${fmtThaiDate(c.d,false)}</div><div class="slip-name">${c.name}</div><div class="slip-line"><span>น้ำหนัก (กก.)</span><span>${c.w.toLocaleString()}</span></div><div class="slip-line"><span>ราคา (บาท/กก.)</span><span>${fmt2(c.pr)}</span></div><div class="slip-line"><span>ยอดขาย (บาท)</span><span>${fmt2(c.t)}</span></div><div class="slip-line"><span>ส่วนแบ่ง ${wPct}%</span><span>${fmt2(c.i)}</span></div><div class="slip-line"><span>หักสะสม</span><span>${fmt2(c.s)}</span></div>${dedLines}<div class="slip-line slip-net"><span>จ่ายสุทธิ (บาท)</span><span>${fmt2(c.p)}</span></div><div class="slip-line" style="margin-top:6px"><span>สะสมปี ${yrBE} ถึงครั้งนี้</span><span>${fmt2(c.cumSav)}</span></div><div class="slip-note">${c.nt||'อื่น ๆ / หมายเหตุ'}</div></div></div>`;
+      let card=`<div class="slip-card"><div class="slip-hdr">ใบจ่ายเงินขายขี้ยางก้อน</div><div class="slip-body">${plotHtml}<div class="slip-sub">${fmtThaiDate(c.d,false)}</div><div class="slip-name">${c.name}</div><div class="slip-line"><span>น้ำหนัก (กก.)</span><span>${c.w.toLocaleString()}</span></div><div class="slip-line"><span>ราคา (บาท/กก.)</span><span>${fmt2(c.pr)}</span></div><div class="slip-line"><span>ยอดขาย (บาท)</span><span>${fmt2(c.t)}</span></div><div class="slip-line"><span>ส่วนแบ่ง ${wPct}%</span><span>${fmt2(c.i)}</span></div><div class="slip-line"><span>หักสะสม ${sPct}%</span><span>${fmt2(c.s)}</span></div>${dedLines}<div class="slip-line slip-net"><span>จ่ายสุทธิ (บาท)</span><span>${fmt2(c.p)}</span></div><div class="slip-line" style="margin-top:6px"><span>สะสมปี ${yrBE} ถึงครั้งนี้</span><span>${fmt2(c.cumSav)}</span></div><div class="slip-note">${c.nt||'อื่น ๆ / หมายเหตุ'}</div></div></div>`;
       html+=`<div class="slip-page"><div class="slip-portrait">${card}</div></div>`;
     }
   });
   $('slipPreview').innerHTML=html||`<p style="color:#c62828;text-align:center">กรุณาติ๊กเลือกอย่างน้อย 1 รายการเพื่อพิมพ์</p>`;
 }
+
 
 async function toggleAdminPanel(){
   if(!$('adminPanel').classList.contains('hide'))return closeAdminPanel();
