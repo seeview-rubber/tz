@@ -250,18 +250,19 @@ th{background:#e8f5e9;text-align:center}
 <div style="font-size:12px;color:#546e7a;margin-top:6px">* สถานะ: <b id="curAdminPinDisplay"></b></div>
 </div>
 <div class="admin-sec">
-<h3>🧹 ล้างข้อมูล (แปลง: <span id="admPlotName" style="color:#1b5e20"></span>)</h3>
-<button type="button" class="bo" style="font-size:14px" onclick="clearPlotWorkers()">1. ล้างชื่อคนงาน (แปลงนี้)</button>
-<button type="button" class="bo" style="font-size:14px" onclick="clearPlotHistory()">2. ล้างประวัติขาย (คงสะสม)</button>
-<button type="button" class="br" style="font-size:14px" onclick="factoryResetPlot()">3. Factory Reset แปลงนี้</button>
-</div>
-<div class="admin-sec" style="margin-bottom:0">
 <h3>📦 สำรอง / กู้คืนข้อมูล</h3>
 <button type="button" class="bb" style="font-size:14px" onclick="doBackup()">📤 คัดลอกข้อมูลสำรอง</button>
 <textarea id="bkBox" rows="3" class="yel" style="font-size:13px;margin-top:8px" placeholder="วางรหัสกู้คืน..."></textarea>
 <button type="button" class="br" style="font-size:14px" onclick="doRestore()">📥 นำเข้าข้อมูลกู้คืน</button>
 </div>
+<div class="admin-sec" style="margin-bottom:0">
+<h3>🧹 ล้างข้อมูล (แปลง: <span id="admPlotName" style="color:#1b5e20"></span>)</h3>
+<button type="button" class="bo" style="font-size:14px" onclick="clearPlotWorkers()">1. ล้างชื่อคนงาน (แปลงนี้)</button>
+<button type="button" class="bo" style="font-size:14px" onclick="clearPlotHistory()">2. ล้างประวัติขาย (คงสะสม)</button>
+<button type="button" class="br" style="font-size:14px" onclick="factoryResetPlot()">3. Factory Reset แปลงนี้</button>
 </div>
+</div>
+
 </div>
 <div id="p3" class="box hide no-print" style="overflow-x:auto">
 <h2>📊 สรุปยอดขายรายปี</h2>
