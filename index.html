@@ -643,10 +643,11 @@ function loadPlots(){
   }catch(e){}
   let oW=JSON.parse(ls.getItem('rbW4')||'null');
   let oH=JSON.parse(ls.getItem('rbH4')||'null');
-  let p=normPlots([{id:'plot_1',name:'แปลงที่ 1',hidden:false,W:oW&&oW.length?oW:[{id:1,n:"ตั้ม",s:6880},{id:2,n:"มาย",s:13760}],H:oH||[]}]);
+  let p=normPlots([{id:'plot_1',name:'แปลงที่ 1',hidden:false,W:oW&&oW.length?oW:[{id:1,n:"คนงาน 1",s:0}],H:oH||[]}]);
   ls.setItem('rbPlotsV1',JSON.stringify(p));
   return p;
 }
+
 let PLOTS=loadPlots();
 const getActivePlots=()=>{let act=PLOTS.filter(p=>!p.hidden);return act.length?act:PLOTS;};
 let curPlotId=ls.getItem('rbCurPlotId')||getActivePlots().at(0).id;
